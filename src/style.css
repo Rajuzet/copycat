@@ -77,6 +77,22 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--maya-cyan);
 }
 
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
 /* ==========================================================================
    Maya Application Shell Grid
    ========================================================================== */
@@ -163,7 +179,7 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--maya-border);
 }
 
-/* 2. Maya Status Line (Shortcuts, Selection Masks, Snapping) */
+/* 2. Maya Status Line */
 .maya-status-line {
   height: 28px;
   background: var(--maya-panel-bg);
@@ -214,7 +230,7 @@ input:focus, select:focus, textarea:focus {
   color: #000;
 }
 
-/* 3. Maya Shelves (Tabs + Icon buttons) */
+/* 3. Maya Shelves */
 .maya-shelves-container {
   background: var(--maya-panel-bg);
   border-bottom: 1px solid var(--maya-border-dark);
@@ -281,7 +297,6 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--maya-border);
   color: var(--maya-text);
   transition: all 0.15s;
-  position: relative;
 }
 
 .maya-shelf-btn:hover {
@@ -311,7 +326,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   Central Workspace: Tool Box + Outliner + Viewport + Channel Box
+   Central Workspace: Tool Box + Outliner + Viewport + Dedicated AI Space + Channel Box
    ========================================================================== */
 .maya-workspace-body {
   flex: 1;
@@ -367,7 +382,7 @@ input:focus, select:focus, textarea:focus {
 
 /* Maya Outliner Dock */
 .maya-outliner-panel {
-  width: 220px;
+  width: 210px;
   background: var(--maya-panel-bg);
   border-right: 1px solid var(--maya-border);
   display: flex;
@@ -454,6 +469,7 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-width: 320px;
 }
 
 /* Viewport Header Strip */
@@ -529,8 +545,8 @@ input:focus, select:focus, textarea:focus {
   position: absolute;
   top: 36px;
   right: 16px;
-  width: 54px;
-  height: 54px;
+  width: 50px;
+  height: 50px;
   background: rgba(30, 30, 30, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
@@ -555,9 +571,259 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: 0.5px;
 }
 
+/* ==========================================================================
+   🔥 DEDICATED AI SPACE: Maya Jwala AI Dock Panel (First-class Workspace)
+   ========================================================================== */
+.maya-ai-dock-panel {
+  width: 350px;
+  background: #202020;
+  border-left: 1px solid rgba(255, 87, 34, 0.35);
+  border-right: 1px solid var(--maya-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 20;
+  box-shadow: inset 2px 0 10px rgba(0, 0, 0, 0.4);
+  transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.maya-ai-dock-panel.collapsed {
+  width: 32px;
+  overflow: hidden;
+}
+
+/* AI Space Titlebar */
+.jwala-dock-titlebar {
+  height: 30px;
+  background: linear-gradient(90deg, rgba(255, 87, 34, 0.22), #262626);
+  border-bottom: 1px solid rgba(255, 87, 34, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+
+.jwala-dock-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.jwala-model-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--jwala-fire);
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.jwala-dock-toggle-btn {
+  color: var(--maya-text-muted);
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.jwala-dock-toggle-btn:hover {
+  color: #fff;
+}
+
+/* AI Space Content */
+.jwala-dock-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #1c1c1c;
+}
+
+/* AI Mode Pills */
+.jwala-mode-pills {
+  display: flex;
+  gap: 4px;
+  background: var(--maya-dark-bg);
+  padding: 2px;
+  border-radius: 4px;
+  border: 1px solid var(--maya-border);
+}
+
+.jwala-mode-pill {
+  flex: 1;
+  text-align: center;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--maya-text-muted);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.jwala-mode-pill:hover {
+  color: #fff;
+}
+
+.jwala-mode-pill.active {
+  background: rgba(255, 87, 34, 0.25);
+  color: #ff9800;
+}
+
+/* Preset Prompt Chips */
+.jwala-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.jwala-chip {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--maya-border);
+  border-radius: 12px;
+  font-size: 10px;
+  color: var(--maya-text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.jwala-chip:hover {
+  background: rgba(255, 87, 34, 0.2);
+  border-color: var(--jwala-fire);
+  color: #fff;
+}
+
+/* Prompt Box */
+.jwala-prompt-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jwala-prompt-textarea {
+  width: 100%;
+  height: 68px;
+  background: #121212;
+  border: 1px solid var(--maya-border);
+  border-radius: 4px;
+  padding: 8px;
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.jwala-prompt-textarea:focus {
+  border-color: var(--jwala-fire);
+  box-shadow: 0 0 10px var(--jwala-glow);
+}
+
+.jwala-generate-btn {
+  background: var(--jwala-gradient);
+  color: #fff;
+  font-weight: 700;
+  font-size: 11.5px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px var(--jwala-glow);
+}
+
+.jwala-generate-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--jwala-glow);
+}
+
+/* Gemma 4 Reasoning & Output Container */
+.jwala-response-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #141414;
+  border: 1px solid rgba(255, 87, 34, 0.3);
+  border-radius: 4px;
+  padding: 10px;
+  display: none;
+}
+
+.jwala-response-container.active {
+  display: flex;
+}
+
+.jwala-thought-header {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #ff9800;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jwala-thought-stream {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+  color: #a0a0a0;
+  border-left: 2px solid #ff9800;
+  padding-left: 8px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.jwala-code-preview {
+  background: #0a0a0a;
+  border: 1px solid var(--maya-border-dark);
+  border-radius: 3px;
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: #26c6da;
+  max-height: 130px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.jwala-apply-btn {
+  background: var(--maya-cyan);
+  color: #000;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 3px;
+  margin-top: 4px;
+  transition: all 0.15s;
+}
+
+.jwala-apply-btn:hover {
+  background: var(--maya-cyan-hover);
+}
+
+/* Collapsed strip for AI dock */
+.maya-ai-dock-panel.collapsed .jwala-dock-content {
+  display: none;
+}
+
+.maya-ai-dock-panel.collapsed .jwala-dock-titlebar {
+  writing-mode: vertical-lr;
+  height: 100%;
+  padding: 12px 6px;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
 /* Right Dock: Channel Box / Layer Editor & Attribute Editor */
 .maya-right-dock {
-  width: 250px;
+  width: 230px;
   background: var(--maya-panel-bg);
   border-left: 1px solid var(--maya-border);
   display: flex;
@@ -578,12 +844,17 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--maya-text-muted);
   cursor: pointer;
   border-right: 1px solid var(--maya-border);
   transition: all 0.15s;
+  padding: 0 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .maya-dock-tab:hover {
@@ -594,6 +865,13 @@ input:focus, select:focus, textarea:focus {
   background: var(--maya-panel-bg);
   color: var(--maya-cyan);
   font-weight: 700;
+}
+
+.maya-dock-tab.jwala-dock-tab {
+  color: #ff9800;
+}
+.maya-dock-tab.jwala-dock-tab.active {
+  color: var(--jwala-fire);
 }
 
 /* Channel Box Content */
@@ -644,7 +922,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .maya-channel-input {
-  width: 90px;
+  width: 80px;
   text-align: right;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -850,200 +1128,6 @@ input:focus, select:focus, textarea:focus {
 .maya-script-editor-toggle:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-}
-
-/* ==========================================================================
-   🔥 Jwala AI Copilot Studio (Powered by Gemma 4 12B)
-   ========================================================================== */
-.jwala-ai-panel {
-  position: absolute;
-  top: 100px;
-  right: 260px;
-  width: 440px;
-  max-height: calc(100vh - 180px);
-  background: rgba(28, 28, 28, 0.94);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--jwala-fire);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8), 0 0 24px var(--jwala-glow);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  z-index: 60;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.jwala-ai-panel.minimized {
-  height: 38px;
-  overflow: hidden;
-}
-
-.jwala-panel-header {
-  padding: 8px 14px;
-  background: linear-gradient(90deg, rgba(255, 87, 34, 0.25), rgba(28, 28, 28, 0.9));
-  border-bottom: 1px solid rgba(255, 87, 34, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.jwala-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 800;
-  color: #fff;
-}
-
-.jwala-model-badge {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  font-weight: 700;
-  background: #ff5722;
-  color: #fff;
-  padding: 2px 6px;
-  border-radius: 3px;
-  letter-spacing: 0.5px;
-}
-
-.jwala-panel-body {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  max-height: calc(100vh - 240px);
-}
-
-.jwala-preset-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.jwala-chip {
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--maya-border);
-  border-radius: 12px;
-  font-size: 10.5px;
-  color: var(--maya-text);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.jwala-chip:hover {
-  background: rgba(255, 87, 34, 0.2);
-  border-color: var(--jwala-fire);
-  color: #fff;
-}
-
-.jwala-prompt-box {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.jwala-prompt-textarea {
-  width: 100%;
-  height: 64px;
-  background: #141414;
-  border: 1px solid var(--maya-border);
-  border-radius: 4px;
-  padding: 8px;
-  color: #fff;
-  font-size: 12px;
-  resize: vertical;
-}
-
-.jwala-prompt-textarea:focus {
-  border-color: var(--jwala-fire);
-  box-shadow: 0 0 10px var(--jwala-glow);
-}
-
-.jwala-generate-btn {
-  background: var(--jwala-gradient);
-  color: #fff;
-  font-weight: 700;
-  font-size: 12px;
-  padding: 8px 16px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-  box-shadow: 0 4px 14px var(--jwala-glow);
-}
-
-.jwala-generate-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px var(--jwala-glow);
-}
-
-/* Gemma 4 Reasoning & Output Container */
-.jwala-response-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: #121212;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  padding: 10px;
-  display: none;
-}
-
-.jwala-response-container.active {
-  display: flex;
-}
-
-.jwala-thought-header {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: #ff9800;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.jwala-thought-stream {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.4;
-  color: #a0a0a0;
-  border-left: 2px solid #ff9800;
-  padding-left: 8px;
-  max-height: 100px;
-  overflow-y: auto;
-}
-
-.jwala-code-preview {
-  background: #0a0a0a;
-  border: 1px solid var(--maya-border-dark);
-  border-radius: 3px;
-  padding: 8px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #26c6da;
-  max-height: 140px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-}
-
-.jwala-apply-btn {
-  background: var(--maya-cyan);
-  color: #000;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 3px;
-  margin-top: 4px;
-  transition: all 0.15s;
-}
-
-.jwala-apply-btn:hover {
-  background: var(--maya-cyan-hover);
 }
 
 /* ==========================================================================

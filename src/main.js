@@ -45,8 +45,8 @@ function initMaya() {
 
       <div class="maya-menu-right">
         <select class="maya-workspace-select" id="workspace-mode">
+          <option value="jwala" selected>🔥 Jwala AI Studio (Dedicated AI Space)</option>
           <option value="modeling">Maya Classic (Modeling)</option>
-          <option value="jwala" selected>🔥 Jwala AI Studio</option>
           <option value="animation">Maya Animation</option>
           <option value="rendering">Arnold Rendering</option>
         </select>
@@ -84,7 +84,7 @@ function initMaya() {
 
       <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 10px; color: var(--maya-text-muted);">Model: <b style="color: var(--jwala-fire);">Gemma-4-12B-GGUF</b></span>
-        <button class="maya-tool-icon-btn" id="top-open-jwala-btn" style="color: var(--jwala-fire);" title="Open Jwala AI Copilot">🔥</button>
+        <button class="maya-tool-icon-btn" id="top-open-jwala-btn" style="color: var(--jwala-fire); font-weight: 700;" title="Toggle Jwala AI Workspace">🔥 AI Space</button>
       </div>
     </div>
 
@@ -102,7 +102,7 @@ function initMaya() {
       <div class="maya-shelf-items" id="shelf-items"></div>
     </div>
 
-    <!-- 4. Central Workspace -->
+    <!-- 4. Central Workspace: Dedicated AI Space Docked -->
     <div class="maya-workspace-body">
       <!-- Left Toolbox -->
       <aside class="maya-toolbox">
@@ -145,6 +145,10 @@ function initMaya() {
             <line x1="3" y1="18" x2="3.01" y2="18"></line>
           </svg>
         </button>
+
+        <button class="maya-toolbox-btn" id="btn-toggle-ai-dock" title="Toggle Dedicated AI Space" style="color: var(--jwala-fire);">
+          <span>🔥</span>
+        </button>
       </aside>
 
       <!-- Outliner Panel -->
@@ -165,7 +169,7 @@ function initMaya() {
           <div class="maya-viewport-tools">
             <button class="maya-tool-icon-btn active" id="btn-wireframe" title="Wireframe (4)">4</button>
             <button class="maya-tool-icon-btn active" id="btn-shaded" title="Smooth Shaded (5)">5</button>
-            <button class="maya-tool-icon-btn" id="btn-textured" title="Textured PBR (6)">6</button>
+            <button class="maya-tool-icon-btn active" id="btn-textured" title="Textured PBR (6)">6</button>
             <button class="maya-tool-icon-btn" id="btn-xray" title="X-Ray mode">X</button>
           </div>
         </div>
@@ -188,11 +192,11 @@ function initMaya() {
         <div class="maya-camera-tag">persp</div>
       </section>
 
+      <!-- DEDICATED DOCKED AI WORKSPACE PANEL -->
+      <aside class="maya-ai-dock-panel" id="maya-ai-dock"></aside>
+
       <!-- Right Dock (Channel Box / Layer Editor) -->
       <aside class="maya-right-dock" id="maya-channel-dock"></aside>
-
-      <!-- Jwala AI Floating Copilot Panel -->
-      <div class="jwala-ai-panel" id="jwala-ai-copilot"></div>
     </div>
 
     <!-- 5. Bottom Animation Timeline & Script Strip -->
@@ -234,8 +238,9 @@ function initMaya() {
   const scriptModal = document.getElementById('script-editor-modal');
   scriptEditor = new MayaScriptEditor(scriptModal, mayaScene, primitives);
 
-  const jwalaPanel = document.getElementById('jwala-ai-copilot');
-  gemmaCopilot = new JwalaGemmaCopilot(jwalaPanel, mayaScene, primitives, scriptEditor);
+  // Dedicated AI Space dock
+  const aiDock = document.getElementById('maya-ai-dock');
+  gemmaCopilot = new JwalaGemmaCopilot(aiDock, mayaScene, primitives, scriptEditor);
 
   // Hook HUD Stats update
   mayaScene.onStatsUpdated = (stats) => {
@@ -302,10 +307,10 @@ function setupShelves() {
       } }
     ],
     jwala: [
-      { id: 'jwala-mech', label: 'AI Mech', isJwala: true, icon: '🤖', action: () => gemmaCopilot.generate('Generate a sci-fi robotic arm with articulated joints and core reactor') },
-      { id: 'jwala-dragon', label: 'AI Dragon', isJwala: true, icon: '🐉', action: () => gemmaCopilot.generate('Create a stylized cyber dragon with segmented body and emission wings') },
-      { id: 'jwala-city', label: 'AI Tower', isJwala: true, icon: '🏙️', action: () => gemmaCopilot.generate('Build a futuristic cyberpunk skyscraper with neon window arrays') },
-      { id: 'jwala-spine', label: 'AI Rig', isJwala: true, icon: '🦴', action: () => gemmaCopilot.generate('Create a humanoid skeletal joint chain for IK rigging') }
+      { id: 'jwala-mech', label: 'AI Mech', isJwala: true, icon: '🤖', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Generate a sci-fi robotic arm with articulated joints and core reactor'); } },
+      { id: 'jwala-dragon', label: 'AI Dragon', isJwala: true, icon: '🐉', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Create a stylized cyber dragon with segmented body and emission wings'); } },
+      { id: 'jwala-city', label: 'AI Tower', isJwala: true, icon: '🏙️', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Build a futuristic cyberpunk skyscraper with neon window arrays'); } },
+      { id: 'jwala-spine', label: 'AI Rig', isJwala: true, icon: '🦴', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Create a humanoid skeletal joint chain for IK rigging'); } }
     ]
   };
 
@@ -336,14 +341,37 @@ function setupShelves() {
     });
   });
 
-  // Default shelf
   renderShelf('poly');
 }
 
 function setupMenuEvents() {
-  // Top Open Jwala AI
-  document.getElementById('top-open-jwala-btn')?.addEventListener('click', () => gemmaCopilot.show());
-  document.getElementById('menu-jwala')?.addEventListener('click', () => gemmaCopilot.show());
+  // Top Open Jwala AI Space
+  const toggleAi = () => {
+    const aiDock = document.getElementById('maya-ai-dock');
+    if (aiDock.classList.contains('collapsed')) {
+      gemmaCopilot.expand();
+    } else {
+      aiDock.classList.add('collapsed');
+      mayaScene.onResize();
+    }
+  };
+
+  document.getElementById('top-open-jwala-btn')?.addEventListener('click', toggleAi);
+  document.getElementById('menu-jwala')?.addEventListener('click', () => gemmaCopilot.expand());
+  document.getElementById('btn-toggle-ai-dock')?.addEventListener('click', toggleAi);
+
+  // Workspace Switcher
+  const wsSelect = document.getElementById('workspace-mode');
+  wsSelect?.addEventListener('change', () => {
+    const val = wsSelect.value;
+    const aiDock = document.getElementById('maya-ai-dock');
+    if (val === 'jwala') {
+      gemmaCopilot.expand();
+    } else {
+      aiDock.classList.add('collapsed');
+      mayaScene.onResize();
+    }
+  });
 
   // Script editor trigger
   document.getElementById('open-script-editor-btn')?.addEventListener('click', () => scriptEditor.open());
@@ -356,6 +384,7 @@ function setupMenuEvents() {
   // Outliner toggle
   document.getElementById('btn-toggle-outliner')?.addEventListener('click', () => {
     document.getElementById('maya-outliner-panel').classList.toggle('collapsed');
+    setTimeout(() => mayaScene.onResize(), 260);
   });
 
   // ViewCube reset

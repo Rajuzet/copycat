@@ -6,6 +6,7 @@ export class JwalaGemmaCopilot {
     this.scriptEditor = scriptEditor;
 
     this.modelName = 'google/gemma-4-12B-it-qat-q4_0-gguf';
+    this.activeMode = '3d'; // '3d', 'rig', 'shader', 'python'
     this.isGenerating = false;
     this.generatedAction = null;
 
@@ -13,42 +14,57 @@ export class JwalaGemmaCopilot {
   }
 
   init() {
+    this.panel.className = 'maya-ai-dock-panel';
+    this.panel.id = 'maya-ai-dock';
+
     this.panel.innerHTML = `
-      <!-- Header -->
-      <div class="jwala-panel-header">
-        <div class="jwala-title">
-          <span style="font-size: 16px;">🔥</span>
+      <!-- Dedicated AI Space Titlebar -->
+      <div class="jwala-dock-titlebar">
+        <div class="jwala-dock-title">
+          <span>🔥</span>
           <span>Jwala AI Studio</span>
-          <span class="jwala-model-badge" title="Target Model: google/gemma-4-12B-it-qat-q4_0-gguf">Gemma-4 12B GGUF</span>
+          <span class="jwala-model-tag" title="Model: google/gemma-4-12B-it-qat-q4_0-gguf">Gemma-4 12B</span>
         </div>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <button id="jwala-minimize-btn" title="Minimize / Expand" style="color: var(--maya-text-muted);">━</button>
-          <button id="jwala-close-btn" title="Close" style="color: var(--maya-text-muted);">✕</button>
+        <div style="display: flex; gap: 4px; align-items: center;">
+          <button class="jwala-dock-toggle-btn" id="jwala-collapse-btn" title="Collapse / Expand AI Workspace">◂</button>
         </div>
       </div>
 
-      <!-- Body -->
-      <div class="jwala-panel-body">
-        <!-- Quick Preset Prompt Chips -->
+      <!-- Dedicated AI Space Content -->
+      <div class="jwala-dock-content" id="jwala-dock-content">
+        <!-- AI Mode Selector -->
         <div>
           <div style="font-size: 10px; font-weight: 700; color: var(--maya-text-muted); text-transform: uppercase; margin-bottom: 6px;">
-            Gemma-4 3D Prompts
+            AI Copilot Mode
           </div>
-          <div class="jwala-preset-chips">
+          <div class="jwala-mode-pills">
+            <div class="jwala-mode-pill active" data-mode="3d">🎨 3D Mesh</div>
+            <div class="jwala-mode-pill" data-mode="rig">🦴 Rigging</div>
+            <div class="jwala-mode-pill" data-mode="shader">🌈 Shaders</div>
+            <div class="jwala-mode-pill" data-mode="python">⚡ Python</div>
+          </div>
+        </div>
+
+        <!-- Quick Gemma-4 Prompts -->
+        <div>
+          <div style="font-size: 10px; font-weight: 700; color: var(--maya-text-muted); text-transform: uppercase; margin-bottom: 6px;">
+            Prompt Presets
+          </div>
+          <div class="jwala-preset-chips" id="jwala-chips-container">
             <button class="jwala-chip" data-prompt="Generate a sci-fi robotic arm with articulated joints and core reactor">🤖 Sci-Fi Mech</button>
             <button class="jwala-chip" data-prompt="Create a stylized cyber dragon with segmented body and emission wings">🐉 Cyber Dragon</button>
             <button class="jwala-chip" data-prompt="Build a futuristic cyberpunk skyscraper with neon window arrays">🏙️ Cyber Skyscraper</button>
-            <button class="jwala-chip" data-prompt="Create a humanoid skeletal joint chain for IK rigging">🦴 Spine Rig</button>
+            <button class="jwala-chip" data-prompt="Create a humanoid skeletal joint chain for IK rigging">🦴 Spine Joint Rig</button>
             <button class="jwala-chip" data-prompt="Apply an Arnold reflective gold and glowing emission material to selected mesh">✨ Arnold Gold Shader</button>
           </div>
         </div>
 
-        <!-- Prompt Input Box -->
+        <!-- Prompt Textarea & Button -->
         <div class="jwala-prompt-box">
           <textarea
             class="jwala-prompt-textarea"
             id="jwala-prompt-input"
-            placeholder="Ask Gemma-4 to generate 3D meshes, MEL scripts, Arnold shaders, or keyframe animations..."
+            placeholder="Instruct Gemma-4 to generate meshes, Arnold shaders, or animation..."
           >Generate a sci-fi robotic arm with articulated joints and core reactor</textarea>
 
           <button class="jwala-generate-btn" id="jwala-submit-btn">
@@ -68,12 +84,19 @@ export class JwalaGemmaCopilot {
 
           <div class="jwala-thought-stream" id="jwala-thought-text"></div>
 
-          <div style="font-size: 11px; font-weight: 700; color: #fff; margin-top: 4px;">Maya Execution Script:</div>
+          <div style="font-size: 10.5px; font-weight: 700; color: #fff; margin-top: 4px;">Maya Execution Script:</div>
           <div class="jwala-code-preview" id="jwala-code-box"></div>
 
           <button class="jwala-apply-btn" id="jwala-execute-3d-btn">
             ⚡ Execute in Maya 3D Viewport
           </button>
+        </div>
+
+        <!-- HF Space Integration Details -->
+        <div style="margin-top: auto; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; border: 1px solid rgba(255,255,255,0.06); font-size: 10px; color: var(--maya-text-muted);">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 2px;">Connected Model</div>
+          <div style="font-family: var(--font-mono); color: var(--maya-cyan);">${this.modelName}</div>
+          <div style="margin-top: 4px;">Space: <a href="https://huggingface.co/spaces/packiyanathan/jwala" target="_blank" style="color: var(--jwala-fire); text-decoration: underline;">packiyanathan/jwala</a></div>
         </div>
       </div>
     `;
@@ -84,13 +107,23 @@ export class JwalaGemmaCopilot {
     this.thoughtEl = this.panel.querySelector('#jwala-thought-text');
     this.codeBox = this.panel.querySelector('#jwala-code-box');
     this.execute3dBtn = this.panel.querySelector('#jwala-execute-3d-btn');
-    this.minBtn = this.panel.querySelector('#jwala-minimize-btn');
-    this.closeBtn = this.panel.querySelector('#jwala-close-btn');
+    this.collapseBtn = this.panel.querySelector('#jwala-collapse-btn');
 
     this.setupEvents();
   }
 
   setupEvents() {
+    // Mode Pills
+    this.panel.querySelectorAll('.jwala-mode-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        this.panel.querySelectorAll('.jwala-mode-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        this.activeMode = pill.dataset.mode;
+        this.updatePromptsForMode(this.activeMode);
+      });
+    });
+
+    // Preset Chips
     this.panel.querySelectorAll('.jwala-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         this.promptInput.value = chip.dataset.prompt;
@@ -98,10 +131,12 @@ export class JwalaGemmaCopilot {
       });
     });
 
+    // Submit button
     this.submitBtn.addEventListener('click', () => {
       this.generate(this.promptInput.value.trim());
     });
 
+    // Execute in 3D viewport
     this.execute3dBtn.addEventListener('click', () => {
       if (this.generatedAction) {
         this.generatedAction();
@@ -109,12 +144,50 @@ export class JwalaGemmaCopilot {
       }
     });
 
-    this.minBtn.addEventListener('click', () => {
-      this.panel.classList.toggle('minimized');
+    // Collapse toggle
+    this.collapseBtn.addEventListener('click', () => {
+      const isCollapsed = this.panel.classList.toggle('collapsed');
+      this.collapseBtn.textContent = isCollapsed ? '▸' : '◂';
+      this.collapseBtn.title = isCollapsed ? 'Expand AI Workspace' : 'Collapse AI Workspace';
+      // Trigger scene resize
+      setTimeout(() => this.scene.onResize(), 260);
     });
+  }
 
-    this.closeBtn.addEventListener('click', () => {
-      this.panel.style.display = 'none';
+  updatePromptsForMode(mode) {
+    const chipsContainer = this.panel.querySelector('#jwala-chips-container');
+    let chips = [];
+
+    if (mode === '3d') {
+      chips = [
+        { label: '🤖 Sci-Fi Mech', prompt: 'Generate a sci-fi robotic arm with articulated joints and core reactor' },
+        { label: '🐉 Cyber Dragon', prompt: 'Create a stylized cyber dragon with segmented body and emission wings' },
+        { label: '🏙️ Cyber Skyscraper', prompt: 'Build a futuristic cyberpunk skyscraper with neon window arrays' }
+      ];
+    } else if (mode === 'rig') {
+      chips = [
+        { label: '🦴 Spine Joint Rig', prompt: 'Create a humanoid skeletal joint chain for IK rigging' },
+        { label: '🦾 Arm IK Chain', prompt: 'Build an articulated 3-joint arm hierarchy with shoulder, elbow, and wrist' }
+      ];
+    } else if (mode === 'shader') {
+      chips = [
+        { label: '✨ Arnold Gold', prompt: 'Apply an Arnold reflective gold and glowing emission material to selected mesh' },
+        { label: '💎 Cyber Glass', prompt: 'Synthesize a high-refraction glowing cyber glass shader with blue rim' }
+      ];
+    } else if (mode === 'python') {
+      chips = [
+        { label: '⚡ Array Duplicate', prompt: 'Create a circular radial array of 8 poly cubes around origin' },
+        { label: '🌀 Spiral Staircase', prompt: 'Generate a procedural spiral staircase with 20 steps using Python' }
+      ];
+    }
+
+    chipsContainer.innerHTML = chips.map(c => `<button class="jwala-chip" data-prompt="${c.prompt}">${c.label}</button>`).join('');
+
+    chipsContainer.querySelectorAll('.jwala-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.promptInput.value = chip.dataset.prompt;
+        this.generate(chip.dataset.prompt);
+      });
     });
   }
 
@@ -128,7 +201,6 @@ export class JwalaGemmaCopilot {
     this.thoughtEl.textContent = '';
     this.codeBox.textContent = '';
 
-    // Determine generation action based on user query
     const lower = prompt.toLowerCase();
     let thoughts = [];
     let scriptCode = '';
@@ -160,7 +232,7 @@ export class JwalaGemmaCopilot {
         const { mesh, name } = this.primitives.createCyberDragon();
         this.scene.addObject(mesh, name);
       };
-    } else if (lower.includes('building') || lower.includes('skyscraper') || lower.includes('city')) {
+    } else if (lower.includes('building') || lower.includes('skyscraper') || lower.includes('city') || lower.includes('tower')) {
       thoughts = [
         'Model: google/gemma-4-12B-it-qat-q4_0-gguf',
         'Parsing intent: Procedural cyberpunk skyscraper with illuminated floor plates.',
@@ -186,8 +258,24 @@ export class JwalaGemmaCopilot {
           this.scene.addObject(mesh, name);
         }
       };
+    } else if (lower.includes('spiral') || lower.includes('staircase')) {
+      thoughts = [
+        'Model: google/gemma-4-12B-it-qat-q4_0-gguf',
+        'Generating procedural spiral staircase algorithm with 20 steps.',
+        'Computing rotational increments of 18 degrees and vertical rise of 0.35m per step.'
+      ];
+      scriptCode = `import maya.cmds as cmds\nimport math\n\nfor i in range(20):\n    step = cmds.polyCube(w=2, h=0.2, d=0.8)\n    angle = i * 0.314\n    cmds.move(math.cos(angle)*1.5, i * 0.3, math.sin(angle)*1.5)\n    cmds.rotate(0, -angle * 57.3, 0)`;
+      actionFn = () => {
+        for (let i = 0; i < 20; i++) {
+          const { mesh, name } = this.primitives.createCube(1);
+          mesh.scale.set(1.8, 0.2, 0.7);
+          const angle = i * 0.314;
+          mesh.position.set(Math.cos(angle) * 1.8, i * 0.28, Math.sin(angle) * 1.8);
+          mesh.rotation.y = -angle;
+          this.scene.addObject(mesh, name);
+        }
+      };
     } else {
-      // Arnold Material or Custom Mesh
       thoughts = [
         'Model: google/gemma-4-12B-it-qat-q4_0-gguf',
         'Parsing intent: Procedural Arnold Shader & Primitive creation.',
@@ -206,9 +294,9 @@ export class JwalaGemmaCopilot {
 
     this.generatedAction = actionFn;
 
-    // Simulate Gemma-4 token streaming
+    // Stream Gemma-4 thoughts
     for (const line of thoughts) {
-      await new Promise(r => setTimeout(r, 140));
+      await new Promise(r => setTimeout(r, 120));
       this.thoughtEl.textContent += line + '\n';
       this.thoughtEl.scrollTop = this.thoughtEl.scrollHeight;
     }
@@ -219,15 +307,15 @@ export class JwalaGemmaCopilot {
     this.submitBtn.disabled = false;
     this.submitBtn.innerHTML = `<span>🔥</span><span>Synthesize with Gemma-4</span>`;
 
-    // Automatically trigger viewport execution!
+    // Apply directly to viewport
     if (this.generatedAction) {
       this.generatedAction();
     }
   }
 
-  show() {
-    this.panel.style.display = 'flex';
-    this.panel.classList.remove('minimized');
-    this.promptInput.focus();
+  expand() {
+    this.panel.classList.remove('collapsed');
+    this.collapseBtn.textContent = '◂';
+    this.scene.onResize();
   }
 }
