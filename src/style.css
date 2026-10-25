@@ -170,6 +170,45 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
 }
 
+.maya-workspace-pills-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 3px;
+  border-radius: 3px;
+  border: 1px solid var(--maya-border);
+}
+
+.maya-ws-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--maya-text-muted);
+  padding: 2px 7px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.maya-ws-pill:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.maya-ws-pill.active {
+  background: var(--maya-panel-bg);
+  color: var(--maya-cyan);
+  font-weight: 700;
+}
+
+.maya-ws-pill[data-ws="ai-space"].active {
+  background: rgba(255, 87, 34, 0.25);
+  color: #ff9800;
+  border: 1px solid rgba(255, 87, 34, 0.45);
+  box-shadow: 0 0 10px var(--jwala-glow);
+}
+
 .maya-workspace-select {
   background: var(--maya-input-bg);
   color: var(--maya-cyan);
@@ -572,30 +611,102 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   🔥 DEDICATED AI SPACE: Maya Jwala AI Dock Panel (First-class Workspace)
+   🔥 DEDICATED AI SPACE: Maya Jwala AI Studio (First-class Dedicated Workspace)
    ========================================================================== */
+
+/* Maya Workspace Body Layout Switching */
+.maya-workspace-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  background: #181818;
+}
+
+/* 1. Dedicated AI Space Layout (Focus on 3D Canvas + Generous AI Studio) */
+.maya-workspace-body.workspace-ai-space .maya-viewport-container {
+  flex: 1;
+  min-width: 380px;
+}
+.maya-workspace-body.workspace-ai-space .maya-ai-dock-panel {
+  display: flex;
+  width: 480px;
+  min-width: 420px;
+  max-width: 55vw;
+}
+.maya-workspace-body.workspace-ai-space .maya-right-dock {
+  display: none; /* Hide squeezed right dock so viewport has plenty of room */
+}
+
+/* 2. Maya Classic Layout (Standard 3D Modeling Layout) */
+.maya-workspace-body.workspace-classic .maya-viewport-container {
+  flex: 1;
+}
+.maya-workspace-body.workspace-classic .maya-ai-dock-panel {
+  display: none; /* No middle squeeze in classic mode */
+}
+.maya-workspace-body.workspace-classic .maya-right-dock {
+  display: flex;
+  width: 240px;
+}
+
+/* 3. 50/50 Split View Layout */
+.maya-workspace-body.workspace-split .maya-viewport-container {
+  flex: 1;
+  max-width: 50vw;
+  width: 50vw;
+}
+.maya-workspace-body.workspace-split .maya-ai-dock-panel {
+  flex: 1;
+  max-width: 50vw;
+  width: 50vw;
+  display: flex;
+}
+.maya-workspace-body.workspace-split .maya-right-dock {
+  display: none;
+}
+.maya-workspace-body.workspace-split .maya-outliner-panel {
+  display: none;
+}
+
+/* 4. Full AI Studio Layout */
+.maya-workspace-body.workspace-full-ai .maya-viewport-container {
+  width: 320px;
+  flex-shrink: 0;
+}
+.maya-workspace-body.workspace-full-ai .maya-ai-dock-panel {
+  flex: 1;
+  display: flex;
+  width: auto;
+}
+.maya-workspace-body.workspace-full-ai .maya-right-dock {
+  display: none;
+}
+
+/* AI Studio Dock Panel Structure */
 .maya-ai-dock-panel {
-  width: 350px;
-  background: #202020;
-  border-left: 1px solid rgba(255, 87, 34, 0.35);
+  width: 480px;
+  background: #1e1e1e;
+  border-left: 1px solid rgba(255, 87, 34, 0.4);
   border-right: 1px solid var(--maya-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   z-index: 20;
-  box-shadow: inset 2px 0 10px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 2px 0 12px rgba(0, 0, 0, 0.5);
   transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .maya-ai-dock-panel.collapsed {
-  width: 32px;
+  width: 0;
   overflow: hidden;
+  border-left: none;
 }
 
 /* AI Space Titlebar */
 .jwala-dock-titlebar {
-  height: 30px;
-  background: linear-gradient(90deg, rgba(255, 87, 34, 0.22), #262626);
+  height: 32px;
+  background: linear-gradient(90deg, rgba(255, 87, 34, 0.25), #262626);
   border-bottom: 1px solid rgba(255, 87, 34, 0.35);
   display: flex;
   align-items: center;
@@ -607,7 +718,7 @@ input:focus, select:focus, textarea:focus {
 .jwala-dock-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   font-size: 12px;
   font-weight: 800;
   color: #fff;
@@ -624,13 +735,83 @@ input:focus, select:focus, textarea:focus {
   border-radius: 2px;
 }
 
+.jwala-status-indicator {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--maya-green);
+  background: rgba(76, 175, 80, 0.15);
+  padding: 1px 5px;
+  border-radius: 10px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.jwala-space-layout-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jwala-layout-btn {
+  color: var(--maya-text-muted);
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+
+.jwala-layout-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--maya-border);
+}
+
 .jwala-dock-toggle-btn {
   color: var(--maya-text-muted);
   font-size: 12px;
-  padding: 2px 4px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  transition: all 0.15s;
 }
+
 .jwala-dock-toggle-btn:hover {
+  color: var(--maya-red);
+  background: rgba(244, 67, 54, 0.15);
+}
+
+/* AI Space Sub-Tabs */
+.jwala-space-subtabs {
+  display: flex;
+  background: var(--maya-dark-bg);
+  border-bottom: 1px solid var(--maya-border);
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.jwala-space-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--maya-text-muted);
+  cursor: pointer;
+  border-right: 1px solid var(--maya-border);
+  transition: all 0.15s;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.jwala-space-tab:hover {
   color: #fff;
+}
+
+.jwala-space-tab.active {
+  background: #1c1c1c;
+  color: #ff9800;
+  font-weight: 700;
+  border-bottom: 2px solid var(--jwala-fire);
 }
 
 /* AI Space Content */
@@ -642,6 +823,17 @@ input:focus, select:focus, textarea:focus {
   flex-direction: column;
   gap: 12px;
   background: #1c1c1c;
+}
+
+.jwala-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--maya-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
 }
 
 /* AI Mode Pills */
@@ -657,7 +849,7 @@ input:focus, select:focus, textarea:focus {
 .jwala-mode-pill {
   flex: 1;
   text-align: center;
-  padding: 4px 6px;
+  padding: 5px 4px;
   font-size: 10px;
   font-weight: 700;
   color: var(--maya-text-muted);
@@ -683,7 +875,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .jwala-chip {
-  padding: 4px 8px;
+  padding: 4px 9px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--maya-border);
   border-radius: 12px;
@@ -808,17 +1000,157 @@ input:focus, select:focus, textarea:focus {
   background: var(--maya-cyan-hover);
 }
 
-/* Collapsed strip for AI dock */
-.maya-ai-dock-panel.collapsed .jwala-dock-content {
-  display: none;
+/* HF Footer Card */
+.jwala-hf-footer-card {
+  margin-top: auto;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+  color: var(--maya-text-muted);
 }
 
-.maya-ai-dock-panel.collapsed .jwala-dock-titlebar {
-  writing-mode: vertical-lr;
-  height: 100%;
-  padding: 12px 6px;
-  justify-content: flex-start;
-  gap: 12px;
+/* Asset History Cards */
+.jwala-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jwala-history-card {
+  background: #141414;
+  border: 1px solid var(--maya-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.jwala-history-card:hover {
+  border-color: rgba(255, 87, 34, 0.4);
+}
+
+.jwala-history-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jwala-history-icon {
+  font-size: 16px;
+}
+
+.jwala-history-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--maya-cyan);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jwala-history-meta {
+  font-size: 9.5px;
+  color: var(--maya-text-muted);
+}
+
+.jwala-history-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: #fff;
+}
+
+.jwala-history-prompt {
+  font-size: 10px;
+  color: #a0a0a0;
+  line-height: 1.35;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 6px;
+  border-radius: 2px;
+}
+
+.jwala-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.jwala-history-btn {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--maya-text);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--maya-border);
+  transition: all 0.15s;
+}
+
+.jwala-history-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* Specs Tab Cards */
+.jwala-spec-card {
+  background: #141414;
+  border: 1px solid var(--maya-border);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jwala-spec-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid var(--maya-border-dark);
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+.jwala-spec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+}
+
+.jwala-spec-row .label {
+  color: var(--maya-text-muted);
+}
+
+.jwala-spec-row .value {
+  font-family: var(--font-mono);
+  color: #fff;
+}
+
+/* Channel Box Quick AI Button */
+.channel-quick-ai-btn {
+  text-align: left;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--maya-border);
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: var(--maya-text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.channel-quick-ai-btn:hover {
+  background: rgba(255, 87, 34, 0.15);
+  border-color: var(--jwala-fire);
+  color: #fff;
 }
 
 /* Right Dock: Channel Box / Layer Editor & Attribute Editor */

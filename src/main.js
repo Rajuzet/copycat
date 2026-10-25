@@ -44,9 +44,18 @@ function initMaya() {
       </div>
 
       <div class="maya-menu-right">
+        <!-- Quick Workspace Switcher Bar -->
+        <div class="maya-workspace-pills-bar" id="maya-workspace-pills">
+          <button class="maya-ws-pill active" data-ws="ai-space" title="Dedicated AI Generative Studio">🔥 AI Space</button>
+          <button class="maya-ws-pill" data-ws="classic" title="Maya Classic 3D Modeling">📦 Classic</button>
+          <button class="maya-ws-pill" data-ws="split" title="50/50 Dual Studio">⚡ Split</button>
+          <button class="maya-ws-pill" data-ws="animation" title="Maya Animation">🎬 Anim</button>
+        </div>
+
         <select class="maya-workspace-select" id="workspace-mode">
-          <option value="jwala" selected>🔥 Jwala AI Studio (Dedicated AI Space)</option>
-          <option value="modeling">Maya Classic (Modeling)</option>
+          <option value="ai-space" selected>🔥 Jwala AI Studio (Dedicated AI Space)</option>
+          <option value="classic">Maya Classic (Modeling)</option>
+          <option value="split">⚡ Split 50/50 Studio</option>
           <option value="animation">Maya Animation</option>
           <option value="rendering">Arnold Rendering</option>
         </select>
@@ -84,7 +93,7 @@ function initMaya() {
 
       <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 10px; color: var(--maya-text-muted);">Model: <b style="color: var(--jwala-fire);">Gemma-4-12B-GGUF</b></span>
-        <button class="maya-tool-icon-btn" id="top-open-jwala-btn" style="color: var(--jwala-fire); font-weight: 700;" title="Toggle Jwala AI Workspace">🔥 AI Space</button>
+        <button class="maya-tool-icon-btn" id="top-open-jwala-btn" style="color: var(--jwala-fire); font-weight: 700;" title="Switch to Dedicated Jwala AI Space">🔥 AI Space</button>
       </div>
     </div>
 
@@ -102,8 +111,8 @@ function initMaya() {
       <div class="maya-shelf-items" id="shelf-items"></div>
     </div>
 
-    <!-- 4. Central Workspace: Dedicated AI Space Docked -->
-    <div class="maya-workspace-body">
+    <!-- 4. Central Workspace: Dedicated AI Space / Classic Modes -->
+    <div class="maya-workspace-body workspace-ai-space" id="maya-workspace-body">
       <!-- Left Toolbox -->
       <aside class="maya-toolbox">
         <button class="maya-toolbox-btn active" id="tool-select" title="Select Tool (Q)">
@@ -238,9 +247,18 @@ function initMaya() {
   const scriptModal = document.getElementById('script-editor-modal');
   scriptEditor = new MayaScriptEditor(scriptModal, mayaScene, primitives);
 
-  // Dedicated AI Space dock
+  // Dedicated AI Space dock & Channel Box cross-linking
   const aiDock = document.getElementById('maya-ai-dock');
-  gemmaCopilot = new JwalaGemmaCopilot(aiDock, mayaScene, primitives, scriptEditor);
+  gemmaCopilot = new JwalaGemmaCopilot(aiDock, mayaScene, primitives, scriptEditor, (mode) => {
+    setWorkspaceLayout(mode);
+  });
+
+  // Cross-link channel box AI tab with dedicated AI space
+  channelBox.onOpenDedicatedAiSpace = () => setWorkspaceLayout('ai-space');
+  channelBox.onTriggerAiPrompt = (prompt) => {
+    setWorkspaceLayout('ai-space');
+    gemmaCopilot.generate(prompt);
+  };
 
   // Hook HUD Stats update
   mayaScene.onStatsUpdated = (stats) => {
@@ -260,6 +278,47 @@ function initMaya() {
   setupShelves();
   setupMenuEvents();
   setupKeyboardShortcuts();
+
+  // Initialize to Dedicated AI Space mode
+  setWorkspaceLayout('ai-space');
+}
+
+export function setWorkspaceLayout(mode) {
+  const body = document.getElementById('maya-workspace-body');
+  const wsSelect = document.getElementById('workspace-mode');
+  const pills = document.querySelectorAll('.maya-ws-pill');
+
+  let wsKey = mode;
+  if (mode === 'jwala') wsKey = 'ai-space';
+  if (mode === 'modeling') wsKey = 'classic';
+
+  body.classList.remove('workspace-ai-space', 'workspace-classic', 'workspace-split', 'workspace-full-ai');
+
+  if (wsKey === 'ai-space') {
+    body.classList.add('workspace-ai-space');
+    gemmaCopilot.expand();
+  } else if (wsKey === 'classic') {
+    body.classList.add('workspace-classic');
+    channelBox.render();
+  } else if (wsKey === 'split') {
+    body.classList.add('workspace-split');
+    gemmaCopilot.expand();
+  } else if (wsKey === 'full-ai') {
+    body.classList.add('workspace-full-ai');
+    gemmaCopilot.expand();
+  } else {
+    body.classList.add('workspace-classic');
+  }
+
+  if (wsSelect && wsSelect.value !== wsKey) {
+    wsSelect.value = wsKey;
+  }
+
+  pills.forEach(p => {
+    p.classList.toggle('active', p.dataset.ws === wsKey);
+  });
+
+  setTimeout(() => mayaScene.onResize(), 150);
 }
 
 function setupShelves() {
@@ -307,10 +366,12 @@ function setupShelves() {
       } }
     ],
     jwala: [
-      { id: 'jwala-mech', label: 'AI Mech', isJwala: true, icon: '🤖', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Generate a sci-fi robotic arm with articulated joints and core reactor'); } },
-      { id: 'jwala-dragon', label: 'AI Dragon', isJwala: true, icon: '🐉', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Create a stylized cyber dragon with segmented body and emission wings'); } },
-      { id: 'jwala-city', label: 'AI Tower', isJwala: true, icon: '🏙️', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Build a futuristic cyberpunk skyscraper with neon window arrays'); } },
-      { id: 'jwala-spine', label: 'AI Rig', isJwala: true, icon: '🦴', action: () => { gemmaCopilot.expand(); gemmaCopilot.generate('Create a humanoid skeletal joint chain for IK rigging'); } }
+      { id: 'jwala-mech', label: 'AI Mech', isJwala: true, icon: '🤖', action: () => { setWorkspaceLayout('ai-space'); gemmaCopilot.generate('Generate a sci-fi robotic arm with articulated joints and core reactor'); } },
+      { id: 'jwala-dragon', label: 'AI Dragon', isJwala: true, icon: '🐉', action: () => { setWorkspaceLayout('ai-space'); gemmaCopilot.generate('Create a stylized cyber dragon with segmented body and emission wings'); } },
+      { id: 'jwala-speedbike', label: 'AI Speedbike', isJwala: true, icon: '🏎️', action: () => { setWorkspaceLayout('ai-space'); gemmaCopilot.generate('Create a futuristic cyber hover speedbike with dual repulsor turbines'); } },
+      { id: 'jwala-saucer', label: 'AI Saucer', isJwala: true, icon: '🛸', action: () => { setWorkspaceLayout('ai-space'); gemmaCopilot.generate('Synthesize a sci-fi scout saucer drone with rotating antigravity ring'); } },
+      { id: 'jwala-city', label: 'AI Tower', isJwala: true, icon: '🏙️', action: () => { setWorkspaceLayout('ai-space'); gemmaCopilot.generate('Build a futuristic cyberpunk skyscraper with neon window arrays'); } },
+      { id: 'jwala-spine', label: 'AI Rig', isJwala: true, icon: '🦴', action: () => { setWorkspaceLayout('ai-space'); gemmaCopilot.generate('Create a humanoid skeletal joint chain for IK rigging'); } }
     ]
   };
 
@@ -345,32 +406,29 @@ function setupShelves() {
 }
 
 function setupMenuEvents() {
-  // Top Open Jwala AI Space
-  const toggleAi = () => {
-    const aiDock = document.getElementById('maya-ai-dock');
-    if (aiDock.classList.contains('collapsed')) {
-      gemmaCopilot.expand();
+  // Top Open Jwala Dedicated AI Space
+  document.getElementById('top-open-jwala-btn')?.addEventListener('click', () => setWorkspaceLayout('ai-space'));
+  document.getElementById('menu-jwala')?.addEventListener('click', () => setWorkspaceLayout('ai-space'));
+  document.getElementById('btn-toggle-ai-dock')?.addEventListener('click', () => {
+    const body = document.getElementById('maya-workspace-body');
+    if (body.classList.contains('workspace-ai-space')) {
+      setWorkspaceLayout('classic');
     } else {
-      aiDock.classList.add('collapsed');
-      mayaScene.onResize();
+      setWorkspaceLayout('ai-space');
     }
-  };
+  });
 
-  document.getElementById('top-open-jwala-btn')?.addEventListener('click', toggleAi);
-  document.getElementById('menu-jwala')?.addEventListener('click', () => gemmaCopilot.expand());
-  document.getElementById('btn-toggle-ai-dock')?.addEventListener('click', toggleAi);
-
-  // Workspace Switcher
+  // Workspace Select dropdown
   const wsSelect = document.getElementById('workspace-mode');
   wsSelect?.addEventListener('change', () => {
-    const val = wsSelect.value;
-    const aiDock = document.getElementById('maya-ai-dock');
-    if (val === 'jwala') {
-      gemmaCopilot.expand();
-    } else {
-      aiDock.classList.add('collapsed');
-      mayaScene.onResize();
-    }
+    setWorkspaceLayout(wsSelect.value);
+  });
+
+  // Workspace Switcher Pills
+  document.querySelectorAll('.maya-ws-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      setWorkspaceLayout(pill.dataset.ws);
+    });
   });
 
   // Script editor trigger

@@ -9,14 +9,15 @@ export class MayaChannelBox {
   init() {
     this.container.innerHTML = `
       <div class="maya-dock-tabs">
-        <div class="maya-dock-tab active" id="tab-channels">Channel Box / Layer Editor</div>
+        <div class="maya-dock-tab active" id="tab-channels">Channels</div>
         <div class="maya-dock-tab" id="tab-attributes">Attribute Editor</div>
+        <div class="maya-dock-tab jwala-dock-tab" id="tab-ai" title="Gemma-4 AI Assistant">🔥 AI</div>
       </div>
 
       <div class="maya-channel-box-content" id="channel-content"></div>
 
       <!-- Display Layers Subpanel -->
-      <div class="maya-layers-box">
+      <div class="maya-layers-box" id="maya-layers-panel">
         <div class="maya-layers-header">
           <span>Display Layers</span>
           <button id="add-layer-btn" style="color: var(--maya-cyan); font-weight: 700;">+ New</button>
@@ -36,20 +37,22 @@ export class MayaChannelBox {
 
     const tabChannels = this.container.querySelector('#tab-channels');
     const tabAttributes = this.container.querySelector('#tab-attributes');
+    const tabAi = this.container.querySelector('#tab-ai');
+    const layersBox = this.container.querySelector('#maya-layers-panel');
 
-    tabChannels.addEventListener('click', () => {
-      tabChannels.classList.add('active');
-      tabAttributes.classList.remove('active');
-      this.activeTab = 'channels';
+    const setActiveTab = (tab) => {
+      [tabChannels, tabAttributes, tabAi].forEach(t => t.classList.remove('active'));
+      this.activeTab = tab;
+      if (tab === 'channels') tabChannels.classList.add('active');
+      if (tab === 'attributes') tabAttributes.classList.add('active');
+      if (tab === 'ai') tabAi.classList.add('active');
+      layersBox.style.display = tab === 'ai' ? 'none' : 'flex';
       this.render();
-    });
+    };
 
-    tabAttributes.addEventListener('click', () => {
-      tabAttributes.classList.add('active');
-      tabChannels.classList.remove('active');
-      this.activeTab = 'attributes';
-      this.render();
-    });
+    tabChannels.addEventListener('click', () => setActiveTab('channels'));
+    tabAttributes.addEventListener('click', () => setActiveTab('attributes'));
+    tabAi.addEventListener('click', () => setActiveTab('ai'));
 
     this.scene.onSelectionChanged = () => {
       this.render();
@@ -59,6 +62,11 @@ export class MayaChannelBox {
   }
 
   render() {
+    if (this.activeTab === 'ai') {
+      this.renderAiQuickDock();
+      return;
+    }
+
     const obj = this.scene.selectedObject;
     if (!obj) {
       this.contentEl.innerHTML = `
@@ -75,6 +83,52 @@ export class MayaChannelBox {
     } else {
       this.renderAttributeEditor(obj);
     }
+  }
+
+  renderAiQuickDock() {
+    this.contentEl.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
+        <div style="padding: 10px; background: rgba(255, 87, 34, 0.12); border: 1px solid rgba(255, 87, 34, 0.3); border-radius: 4px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-weight: 800; color: #fff; font-size: 12px;">🔥 Jwala AI Copilot</span>
+            <span style="font-size: 9px; background: var(--jwala-fire); color: #fff; padding: 1px 4px; border-radius: 2px; font-weight: 700;">12B</span>
+          </div>
+          <p style="font-size: 10.5px; color: #ddd; line-height: 1.4; margin-bottom: 8px;">
+            Google Gemma-4 12B instruction-tuned generative AI model for Maya 3D artists.
+          </p>
+          <button id="channel-open-full-ai-space-btn" style="width: 100%; background: var(--jwala-gradient); color: #fff; font-weight: 700; padding: 7px; border-radius: 3px; font-size: 11px; box-shadow: 0 2px 8px var(--jwala-glow);">
+            🚀 Open Dedicated AI Space
+          </button>
+        </div>
+
+        <div>
+          <div style="font-size: 10px; font-weight: 700; color: var(--maya-text-muted); text-transform: uppercase; margin-bottom: 6px;">
+            Quick Presets
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <button class="channel-quick-ai-btn" data-prompt="Generate a sci-fi robotic arm with articulated joints and core reactor">🤖 Sci-Fi Mech</button>
+            <button class="channel-quick-ai-btn" data-prompt="Create a stylized cyber dragon with segmented body and emission wings">🐉 Cyber Dragon</button>
+            <button class="channel-quick-ai-btn" data-prompt="Build a futuristic cyberpunk skyscraper with neon window arrays">🏙️ Cyber Skyscraper</button>
+            <button class="channel-quick-ai-btn" data-prompt="Create a futuristic cyber hover speedbike with dual repulsor turbines">🏎️ Hover Speedbike</button>
+            <button class="channel-quick-ai-btn" data-prompt="Synthesize a sci-fi scout saucer drone with rotating antigravity ring">🛸 Sci-Fi Saucer</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.contentEl.querySelector('#channel-open-full-ai-space-btn')?.addEventListener('click', () => {
+      if (this.onOpenDedicatedAiSpace) {
+        this.onOpenDedicatedAiSpace();
+      }
+    });
+
+    this.contentEl.querySelectorAll('.channel-quick-ai-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (this.onTriggerAiPrompt) {
+          this.onTriggerAiPrompt(btn.dataset.prompt);
+        }
+      });
+    });
   }
 
   renderChannelBox(obj) {

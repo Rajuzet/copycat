@@ -233,5 +233,93 @@ export const primitives = {
     const name = `jwala_building${counters.ai_mesh++}`;
     root.userData = { type: 'ai_procedural_building' };
     return { mesh: root, name };
+  },
+
+  // Gemma-4 Procedural Cyber Hover Speedbike
+  createHoverSpeedbike() {
+    const root = new THREE.Group();
+    const chassisMat = createMayaMaterial(0x181a1d, 0.85, 0.15);
+    const orangeMat = createMayaMaterial(0xff5722, 0.5, 0.3);
+    const glowMat = new THREE.MeshStandardMaterial({
+      color: 0x00e5ff,
+      emissive: 0x00e5ff,
+      emissiveIntensity: 2.5
+    });
+
+    // Aerodynamic Chassis
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 4), chassisMat);
+    chassis.position.y = 1.2;
+    root.add(chassis);
+
+    // Streamlined nose canopy
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.8, 4), orangeMat);
+    nose.rotateX(-Math.PI / 2);
+    nose.rotateY(Math.PI / 4);
+    nose.position.set(0, 1.3, 2.7);
+    root.add(nose);
+
+    // Twin Repulsor Jet Turbines
+    [-0.8, 0.8].forEach(side => {
+      const thruster = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 2.2, 16), chassisMat);
+      thruster.rotateX(Math.PI / 2);
+      thruster.position.set(side, 1.1, -1.2);
+      root.add(thruster);
+
+      // Jet exhaust glow ring
+      const exhaust = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.08, 12, 24), glowMat);
+      exhaust.position.set(side, 1.1, -2.3);
+      root.add(exhaust);
+    });
+
+    // Hover Repulsor Discs underneath
+    [-1, 1].forEach(z => {
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.15, 16), glowMat);
+      pad.position.set(0, 0.4, z * 1.3);
+      root.add(pad);
+    });
+
+    const name = `jwala_speedbike${counters.ai_mesh++}`;
+    root.userData = { type: 'ai_procedural_speedbike' };
+    return { mesh: root, name };
+  },
+
+  // Gemma-4 Procedural Sci-Fi Scout Saucer Drone
+  createSciFiSaucer() {
+    const root = new THREE.Group();
+    const hullMat = createMayaMaterial(0x282c34, 0.9, 0.2);
+    const goldMat = createMayaMaterial(0xffb300, 0.8, 0.25);
+    const glowMat = new THREE.MeshStandardMaterial({
+      color: 0x76ff03,
+      emissive: 0x76ff03,
+      emissiveIntensity: 2.0
+    });
+
+    // Main Disc Hull
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.2, 0.6, 24), hullMat);
+    hull.position.y = 2.0;
+    root.add(hull);
+
+    // Upper cockpit dome
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.2, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), goldMat);
+    dome.position.y = 2.3;
+    root.add(dome);
+
+    // Peripheral sensor array (6 glowing nodes around perimeter)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI * 2) / 6;
+      const node = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), glowMat);
+      node.position.set(Math.cos(angle) * 3.1, 2.0, Math.sin(angle) * 3.1);
+      root.add(node);
+    }
+
+    // Ventral antigravity emitter
+    const emitter = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.18, 16, 32), glowMat);
+    emitter.rotateX(Math.PI / 2);
+    emitter.position.y = 1.6;
+    root.add(emitter);
+
+    const name = `jwala_saucer${counters.ai_mesh++}`;
+    root.userData = { type: 'ai_procedural_saucer' };
+    return { mesh: root, name };
   }
 };
