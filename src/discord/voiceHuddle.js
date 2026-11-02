@@ -6,7 +6,7 @@ export class VoiceHuddle {
   constructor(container, voiceState, onToggleMute, onToggleLaser, onTogglePresent) {
     this.container = container;
     this.voiceState = voiceState;
-    this.onToggleMute = onToggleMute || (() => {});
+    this.onToggleMute = onToggleMute || (() => { });
     this.onToggleLaser = onToggleLaser || (() => {});
     this.onTogglePresent = onTogglePresent || (() => {});
     this.animId = null;
@@ -91,21 +91,29 @@ export class VoiceHuddle {
     this.startWaveformAnimation();
   }
 
+  toggleMute() {
+    this.voiceState.isMuted = !this.voiceState.isMuted;
+    this.onToggleMute(this.voiceState.isMuted);
+    this.render();
+  }
+
+  toggleDeafen() {
+    this.voiceState.isDeafened = !this.voiceState.isDeafened;
+    this.render();
+  }
+
   bindEvents() {
     const muteBtn = this.container.querySelector('#btn-mute-mic');
     if (muteBtn) {
       muteBtn.addEventListener('click', () => {
-        this.voiceState.isMuted = !this.voiceState.isMuted;
-        this.onToggleMute(this.voiceState.isMuted);
-        this.render();
+        this.toggleMute();
       });
     }
 
     const deafBtn = this.container.querySelector('#btn-deafen');
     if (deafBtn) {
       deafBtn.addEventListener('click', () => {
-        this.voiceState.isDeafened = !this.voiceState.isDeafened;
-        this.render();
+        this.toggleDeafen();
       });
     }
 

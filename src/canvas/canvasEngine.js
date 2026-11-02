@@ -693,41 +693,6 @@ export class CanvasEngine {
     }
   }
 
-  // Interactive Live Laser Pointer Trail
-  renderLaser(ctx) {
-    if (!this.laserTrail || this.laserTrail.length === 0) return;
-    const now = Date.now();
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    for (let i = 1; i < this.laserTrail.length; i++) {
-      const p1 = this.laserTrail[i - 1];
-      const p2 = this.laserTrail[i];
-      const age = now - p2.time;
-      if (age > 1200) continue;
-
-      const alpha = Math.max(0, 1 - age / 1200);
-      ctx.strokeStyle = `rgba(255, 30, 80, ${alpha})`;
-      ctx.lineWidth = (6 / this.viewport.zoom) * alpha;
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-    }
-
-    const tip = this.laserTrail[this.laserTrail.length - 1];
-    if (tip) {
-      ctx.fillStyle = '#FF1E50';
-      ctx.shadowColor = '#FF1E50';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 4 / this.viewport.zoom, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
   // Marquee Selection Box
   renderMarquee(ctx) {
     const m = this.marquee;

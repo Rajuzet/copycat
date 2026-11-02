@@ -6,3 +6,6 @@ dist-ssr
 *.log
 __pycache__/
 *.pyc
+.vercel
+
+.vercel

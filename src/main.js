@@ -40,28 +40,7 @@ class CanvasCordApp {
     this.root.innerHTML = `
       <div class="app-layout">
         <!-- 1. Discord Guild / Server Rail (Leftmost) -->
-        <nav class="guild-rail">
-          <div class="guild-item active" data-server="srv_design" title="Design Guild">
-            <div class="guild-pill"></div>
-            <div class="guild-icon">🎨</div>
-            <span class="guild-badge">3</span>
-          </div>
-          <div class="guild-item" data-server="srv_product" title="Acme Product Team">
-            <div class="guild-pill"></div>
-            <div class="guild-icon">🚀</div>
-          </div>
-          <div class="guild-item" data-server="srv_ai" title="AI Innovation Lab">
-            <div class="guild-pill"></div>
-            <div class="guild-icon">✨</div>
-          </div>
-          <div class="guild-separator"></div>
-          <div class="guild-item action" id="btn-add-server" title="Add a Server">
-            <div class="guild-icon">+</div>
-          </div>
-          <div class="guild-item action" id="btn-explore-servers" title="Explore Public Hubs">
-            <div class="guild-icon">🧭</div>
-          </div>
-        </nav>
+        <nav class="guild-rail" id="guild-rail-container"></nav>
 
         <!-- 2. Context Sidebar (Switchable: Channels vs Figma Layers) -->
         <aside class="context-sidebar">
@@ -71,72 +50,7 @@ class CanvasCordApp {
           </div>
 
           <!-- Channels Mode View -->
-          <div class="sidebar-panel-view active" id="view-channels">
-            <div class="server-header">
-              <span class="server-name">Design Guild</span>
-              <span class="server-badge-verified">✓</span>
-            </div>
-
-            <div class="channels-section">
-              <div class="channel-group-title">
-                <span>TEXT CHANNELS</span>
-                <span class="add-channel-btn">+</span>
-              </div>
-              <div class="channels-list">
-                <div class="channel-row active" data-chan="chan_critique">
-                  <span class="chan-hash">#</span>
-                  <span class="chan-name">design-critique</span>
-                  <span class="chan-badge">3</span>
-                </div>
-                <div class="channel-row" data-chan="chan_general">
-                  <span class="chan-hash">#</span>
-                  <span class="chan-name">general-chat</span>
-                </div>
-                <div class="channel-row" data-chan="chan_ai_lab">
-                  <span class="chan-hash">#</span>
-                  <span class="chan-name">ai-prompt-lab</span>
-                  <span class="chan-badge">1</span>
-                </div>
-                <div class="channel-row" data-chan="chan_assets">
-                  <span class="chan-hash">#</span>
-                  <span class="chan-name">asset-drops</span>
-                </div>
-              </div>
-
-              <div class="channel-group-title" style="margin-top:16px">
-                <span>VOICE HUDDLES</span>
-              </div>
-              <div class="channels-list">
-                <div class="channel-row voice active" data-chan="chan_huddle">
-                  <span class="chan-hash">🔊</span>
-                  <span class="chan-name">Design Huddle</span>
-                  <div class="voice-channel-users">
-                    <span class="user-pill-speaking">3 in call</span>
-                  </div>
-                </div>
-                <div class="channel-row voice" data-chan="chan_focus">
-                  <span class="chan-hash">🔊</span>
-                  <span class="chan-name">Silent Focus</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- User Status Footer in Discord Sidebar -->
-            <div class="user-status-footer">
-              <div class="user-avatar-wrap">
-                <img src="${this.discordState.currentUser.avatar}" class="user-status-avatar" alt="User" />
-                <span class="status-indicator online"></span>
-              </div>
-              <div class="user-names">
-                <span class="user-display-name">You (Lead)</span>
-                <span class="user-subtext">Online</span>
-              </div>
-              <div class="user-quick-buttons">
-                <button class="footer-btn" id="btn-toggle-mic" title="Mute/Unmute">🎙️</button>
-                <button class="footer-btn" id="btn-toggle-deaf" title="Deafen">🎧</button>
-              </div>
-            </div>
-          </div>
+          <div class="sidebar-panel-view active" id="view-channels"></div>
 
           <!-- Layers Mode View -->
           <div class="sidebar-panel-view" id="view-layers">
@@ -407,6 +321,182 @@ class CanvasCordApp {
 
     // 6. Multiplayer Presence
     this.presence = new MultiplayerPresence(this.engine);
+
+    // 7. Initial Discord Rails & Channels Rendering
+    this.renderGuildRail();
+    this.renderChannelsSidebar();
+  }
+
+  renderGuildRail() {
+    const rail = document.getElementById('guild-rail-container');
+    if (!rail) return;
+
+    rail.innerHTML = `
+      ${this.discordState.servers.map(s => `
+        <div class="guild-item ${s.id === this.discordState.activeServerId ? 'active' : ''}" data-server="${s.id}" title="${s.name}">
+          <div class="guild-pill"></div>
+          <div class="guild-icon">${s.icon || '💬'}</div>
+          ${s.badge ? `<span class="guild-badge">${s.badge}</span>` : ''}
+        </div>
+      `).join('')}
+      <div class="guild-separator"></div>
+      <div class="guild-item action" id="btn-add-server" title="Add a Server">
+        <div class="guild-icon">+</div>
+      </div>
+      <div class="guild-item action" id="btn-explore-servers" title="Explore Public Hubs">
+        <div class="guild-icon">🧭</div>
+      </div>
+    `;
+
+    rail.querySelectorAll('.guild-item[data-server]').forEach(item => {
+      item.addEventListener('click', () => {
+        const srvId = item.dataset.server;
+        this.discordState.activeServerId = srvId;
+        const server = this.discordState.servers.find(s => s.id === srvId);
+        if (server) {
+          const firstText = server.channels.find(c => c.type !== 'voice') || server.channels[0];
+          if (firstText) this.discordState.activeChannelId = firstText.id;
+        }
+        this.renderGuildRail();
+        this.renderChannelsSidebar();
+        this.chat.render();
+      });
+    });
+
+    rail.querySelector('#btn-add-server')?.addEventListener('click', () => {
+      const name = prompt('Enter new Server / Team name:', 'Design Systems');
+      if (name && name.trim()) {
+        const newServer = {
+          id: 'srv_' + Date.now(),
+          name: name.trim(),
+          icon: '💎',
+          accentColor: '#5865F2',
+          channels: [
+            { id: 'chan_' + Date.now() + '_gen', name: 'general', type: 'text', unread: 0 },
+            { id: 'chan_' + Date.now() + '_crit', name: 'design-reviews', type: 'text', unread: 0 },
+            { id: 'chan_' + Date.now() + '_vc', name: 'Design Huddle', type: 'voice', usersCount: 1 },
+          ],
+        };
+        this.discordState.servers.push(newServer);
+        this.discordState.activeServerId = newServer.id;
+        this.discordState.activeChannelId = newServer.channels[0].id;
+        this.renderGuildRail();
+        this.renderChannelsSidebar();
+        this.chat.render();
+      }
+    });
+
+    rail.querySelector('#btn-explore-servers')?.addEventListener('click', () => {
+      alert('✨ CanvasCord Discovery: Connected to 12 Public Community Design Hubs & Figma System Repositories!');
+    });
+  }
+
+  renderChannelsSidebar() {
+    const container = document.getElementById('view-channels');
+    if (!container) return;
+
+    const server = this.discordState.servers.find(s => s.id === this.discordState.activeServerId) || this.discordState.servers[0];
+    const textChannels = server.channels.filter(c => c.type !== 'voice');
+    const voiceChannels = server.channels.filter(c => c.type === 'voice');
+
+    container.innerHTML = `
+      <div class="server-header">
+        <span class="server-name">${server.name}</span>
+        <span class="server-badge-verified">✓</span>
+      </div>
+
+      <div class="channels-section">
+        <div class="channel-group-title">
+          <span>TEXT CHANNELS</span>
+          <span class="add-channel-btn" id="btn-add-channel" title="Create Text Channel">+</span>
+        </div>
+        <div class="channels-list">
+          ${textChannels.map(ch => `
+            <div class="channel-row ${ch.id === this.discordState.activeChannelId ? 'active' : ''}" data-chan="${ch.id}">
+              <span class="chan-hash">#</span>
+              <span class="chan-name">${ch.name}</span>
+              ${ch.unread ? `<span class="chan-badge">${ch.unread}</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="channel-group-title" style="margin-top:16px">
+          <span>VOICE HUDDLES</span>
+        </div>
+        <div class="channels-list">
+          ${voiceChannels.map(vh => `
+            <div class="channel-row voice ${vh.id === this.discordState.voice.channelId ? 'active' : ''}" data-chan="${vh.id}">
+              <span class="chan-hash">🔊</span>
+              <span class="chan-name">${vh.name}</span>
+              ${vh.usersCount ? `
+                <div class="voice-channel-users">
+                  <span class="user-pill-speaking">${vh.usersCount} in call</span>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- User Status Footer in Discord Sidebar -->
+      <div class="user-status-footer">
+        <div class="user-avatar-wrap">
+          <img src="${this.discordState.currentUser.avatar}" class="user-status-avatar" alt="User" />
+          <span class="status-indicator online"></span>
+        </div>
+        <div class="user-names">
+          <span class="user-display-name">${this.discordState.currentUser.name}</span>
+          <span class="user-subtext">${this.discordState.currentUser.customStatus || 'Online'}</span>
+        </div>
+        <div class="user-quick-buttons">
+          <button class="footer-btn" id="btn-toggle-mic" title="Mute/Unmute">${this.discordState.voice.isMuted ? '🔇' : '🎙️'}</button>
+          <button class="footer-btn" id="btn-toggle-deaf" title="Deafen">${this.discordState.voice.isDeafened ? '🔕' : '🎧'}</button>
+        </div>
+      </div>
+    `;
+
+    // Channel Switching
+    container.querySelectorAll('.channel-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const chanId = row.dataset.chan;
+        if (row.classList.contains('voice')) {
+          this.discordState.voice.isConnected = true;
+          this.discordState.voice.channelName = row.querySelector('.chan-name')?.textContent || 'Design Huddle';
+          this.voiceHuddle.render();
+          this.renderChannelsSidebar();
+          return;
+        }
+        this.discordState.activeChannelId = chanId;
+        this.renderChannelsSidebar();
+        this.chat.render();
+      });
+    });
+
+    // Add Channel
+    container.querySelector('#btn-add-channel')?.addEventListener('click', () => {
+      const name = prompt('Enter new channel name (e.g. wireframes):');
+      if (name && name.trim()) {
+        const cleanName = name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+        const newChan = { id: 'chan_' + Date.now(), name: cleanName, type: 'text', unread: 0 };
+        server.channels.push(newChan);
+        this.discordState.activeChannelId = newChan.id;
+        this.renderChannelsSidebar();
+        this.chat.render();
+      }
+    });
+
+    // Footer Buttons
+    container.querySelector('#btn-toggle-mic')?.addEventListener('click', () => {
+      this.voiceHuddle.toggleMute();
+      const micBtn = container.querySelector('#btn-toggle-mic');
+      if (micBtn) micBtn.textContent = this.discordState.voice.isMuted ? '🔇' : '🎙️';
+    });
+
+    container.querySelector('#btn-toggle-deaf')?.addEventListener('click', () => {
+      this.voiceHuddle.toggleDeafen();
+      const deafBtn = container.querySelector('#btn-toggle-deaf');
+      if (deafBtn) deafBtn.textContent = this.discordState.voice.isDeafened ? '🔕' : '🎧';
+    });
   }
 
   /**
@@ -551,16 +641,6 @@ class CanvasCordApp {
     });
     document.getElementById('avatar-alex')?.addEventListener('click', () => {
       this.presence.jumpToCollaborator('collab_alex');
-    });
-
-    // Channel Switching
-    document.querySelectorAll('.channel-row').forEach(row => {
-      row.addEventListener('click', () => {
-        document.querySelectorAll('.channel-row').forEach(r => r.classList.remove('active'));
-        row.classList.add('active');
-        this.discordState.activeChannelId = row.dataset.chan;
-        this.chat.render();
-      });
     });
 
     // AI Modal Dialog

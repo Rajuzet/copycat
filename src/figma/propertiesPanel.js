@@ -477,29 +477,53 @@ export class PropertiesPanel {
   }
 
   alignElement(el, alignType) {
-    const parentW = this.engine.width;
-    const parentH = this.engine.height;
+    const selected = Array.from(this.engine.selectedIds)
+      .map(id => this.engine.elements.find(i => i.id === id))
+      .filter(Boolean);
 
-    switch (alignType) {
-      case 'left':
-        el.x = 40;
-        break;
-      case 'center-h':
-        el.x = (parentW / 2 - el.width / 2) - this.engine.viewport.x;
-        break;
-      case 'right':
-        el.x = (parentW - el.width - 40) - this.engine.viewport.x;
-        break;
-      case 'top':
-        el.y = 40;
-        break;
-      case 'center-v':
-        el.y = (parentH / 2 - el.height / 2) - this.engine.viewport.y;
-        break;
-      case 'bottom':
-        el.y = (parentH - el.height - 40) - this.engine.viewport.y;
-        break;
+    if (selected.length > 1) {
+      // Multi-element alignment relative to selection bounding box
+      const minX = Math.min(...selected.map(i => i.x));
+      const maxX = Math.max(...selected.map(i => i.x + i.width));
+      const minY = Math.min(...selected.map(i => i.y));
+      const maxY = Math.max(...selected.map(i => i.y + i.height));
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      for (const item of selected) {
+        if (alignType === 'left') item.x = minX;
+        else if (alignType === 'center-h') item.x = Math.round(centerX - item.width / 2);
+        else if (alignType === 'right') item.x = maxX - item.width;
+        else if (alignType === 'top') item.y = minY;
+        else if (alignType === 'center-v') item.y = Math.round(centerY - item.height / 2);
+        else if (alignType === 'bottom') item.y = maxY - item.height;
+      }
+    } else {
+      // Single element: align relative to parent Frame if inside one, or visible viewport
+      const parentFrame = this.engine.elements.find(f => 
+        f.type === 'frame' && f.id !== el.id &&
+        el.x >= f.x && el.x + el.width <= f.x + f.width &&
+        el.y >= f.y && el.y + el.height <= f.y + f.height
+      );
+
+      if (parentFrame) {
+        if (alignType === 'left') el.x = parentFrame.x + 16;
+        else if (alignType === 'center-h') el.x = Math.round(parentFrame.x + (parentFrame.width - el.width) / 2);
+        else if (alignType === 'right') el.x = parentFrame.x + parentFrame.width - el.width - 16;
+        else if (alignType === 'top') el.y = parentFrame.y + 16;
+        else if (alignType === 'center-v') el.y = Math.round(parentFrame.y + (parentFrame.height - el.height) / 2);
+        else if (alignType === 'bottom') el.y = parentFrame.y + parentFrame.height - el.height - 16;
+      } else {
+        const centerWorld = this.engine.screenToWorld(this.engine.width / 2, this.engine.height / 2);
+        if (alignType === 'center-h') el.x = Math.round(centerWorld.x - el.width / 2);
+        else if (alignType === 'center-v') el.y = Math.round(centerWorld.y - el.height / 2);
+        else if (alignType === 'left') el.x = Math.round(centerWorld.x - 300);
+        else if (alignType === 'right') el.x = Math.round(centerWorld.x + 300 - el.width);
+        else if (alignType === 'top') el.y = Math.round(centerWorld.y - 200);
+        else if (alignType === 'bottom') el.y = Math.round(centerWorld.y + 200 - el.height);
+      }
     }
+
     this.engine.requestRender();
     this.render();
     this.onUpdate();

@@ -224,43 +224,60 @@ export class ToolController {
     }
 
     if (this.activeTool === 'text') {
-      const text = prompt('Enter text for label:', 'Design System Component');
-      if (text) {
-        const el = createElement('text', {
-          x: world.x,
-          y: world.y,
-          text: text,
-          width: text.length * 12 + 20,
-          height: 36,
-        });
-        this.engine.elements.push(el);
-        this.engine.selectedIds.clear();
-        this.engine.selectedIds.add(el.id);
-        this.onSelectionChange([el.id]);
-        this.onElementChange();
-        this.saveState();
-        this.setTool('select');
+      let text = 'Design Label';
+      try {
+        const input = prompt('Enter text for label:', 'Design Label');
+        if (input !== null && input.trim()) text = input.trim();
+        else if (input === null) {
+          // If cancelled by user, still create a placeholder or reset tool
+          text = 'Design Label';
+        }
+      } catch (e) {
+        text = 'Design Label';
       }
+
+      const el = createElement('text', {
+        x: world.x,
+        y: world.y,
+        text: text,
+        width: Math.max(120, text.length * 12 + 20),
+        height: 36,
+      });
+      this.engine.elements.push(el);
+      this.engine.selectedIds.clear();
+      this.engine.selectedIds.add(el.id);
+      this.onSelectionChange([el.id]);
+      this.onElementChange();
+      this.saveState();
+      this.setTool('select');
       this.dragMode = 'none';
       return;
     }
 
     if (this.activeTool === 'sticky') {
-      const note = prompt('Enter sticky note content:', '💡 Polish the navigation bar animation!');
-      if (note) {
-        const el = createElement('sticky', {
-          x: world.x,
-          y: world.y,
-          text: note,
-        });
-        this.engine.elements.push(el);
-        this.engine.selectedIds.clear();
-        this.engine.selectedIds.add(el.id);
-        this.onSelectionChange([el.id]);
-        this.onElementChange();
-        this.saveState();
-        this.setTool('select');
+      let note = '💡 Polish the navigation bar animation!';
+      try {
+        const input = prompt('Enter sticky note content:', '💡 Polish the navigation bar animation!');
+        if (input !== null && input.trim()) note = input.trim();
+        else if (input === null) {
+          note = '💡 New Sticky Note';
+        }
+      } catch (e) {
+        note = '💡 New Sticky Note';
       }
+
+      const el = createElement('sticky', {
+        x: world.x,
+        y: world.y,
+        text: note,
+      });
+      this.engine.elements.push(el);
+      this.engine.selectedIds.clear();
+      this.engine.selectedIds.add(el.id);
+      this.onSelectionChange([el.id]);
+      this.onElementChange();
+      this.saveState();
+      this.setTool('select');
       this.dragMode = 'none';
       return;
     }
@@ -414,6 +431,28 @@ export class ToolController {
 
     if (this.dragMode === 'draw' || this.dragMode === 'pen') {
       if (this.activeDrawElement) {
+        const el = this.activeDrawElement;
+        // If single-clicked without dragging, assign natural default dimensions
+        if (el.width < 10 && el.height < 10) {
+          if (el.type === 'frame') {
+            el.width = 390;
+            el.height = 680;
+          } else if (el.type === 'rect') {
+            el.width = 160;
+            el.height = 100;
+          } else if (el.type === 'circle') {
+            el.width = 100;
+            el.height = 100;
+          } else if (el.type === 'star') {
+            el.width = 120;
+            el.height = 120;
+          } else if (el.type === 'arrow') {
+            el.width = 160;
+            el.height = 40;
+            el.points = [{ x: 0, y: 0 }, { x: 160, y: 40 }];
+          }
+        }
+
         this.onSelectionChange([this.activeDrawElement.id]);
         this.onElementChange();
         this.saveState();
