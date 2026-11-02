@@ -151,3 +151,4 @@ export class VoiceHuddle {
     this.animId = requestAnimationFrame(draw);
   }
 }
+

@@ -94,3 +94,4 @@ export class MultiplayerPresence {
     this.engine.requestRender();
   }
 }
+

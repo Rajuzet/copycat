@@ -515,3 +515,4 @@ export class PropertiesPanel {
     }
   }
 }
+

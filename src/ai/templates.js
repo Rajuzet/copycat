@@ -399,3 +399,4 @@ export function createPricingTableTemplate(startX = 120, startY = 880) {
 
   return elements;
 }
+

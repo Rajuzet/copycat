@@ -490,3 +490,4 @@ class CanvasCordApp {
 window.addEventListener('DOMContentLoaded', () => {
   new CanvasCordApp();
 });
+

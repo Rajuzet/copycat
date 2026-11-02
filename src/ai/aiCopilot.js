@@ -147,3 +147,4 @@ export class AICopilot {
     return `📝 Dropped generated copilot note for prompt: *"${promptText}"*`;
   }
 }
+

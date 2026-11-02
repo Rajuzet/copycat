@@ -199,3 +199,4 @@ export class DiscordChat {
     }, 600);
   }
 }
+

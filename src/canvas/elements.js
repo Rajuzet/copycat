@@ -148,3 +148,4 @@ function getDefaultName(type) {
   };
   return map[type] || 'Element';
 }
+
