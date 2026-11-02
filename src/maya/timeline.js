@@ -18,6 +18,7 @@ export class MayaTimeline {
       <div class="maya-time-slider" id="time-slider">
         <div class="maya-timeline-ticks" id="timeline-ticks"></div>
         <div class="maya-playhead-needle" id="playhead-needle" style="left: 0%;">
+          <div class="timeline-scrub-tooltip" id="timeline-scrub-tooltip" style="display: none;">1</div>
           <div class="maya-playhead-thumb"></div>
         </div>
       </div>
@@ -46,6 +47,7 @@ export class MayaTimeline {
     this.sliderEl = this.container.querySelector('#time-slider');
     this.ticksEl = this.container.querySelector('#timeline-ticks');
     this.needleEl = this.container.querySelector('#playhead-needle');
+    this.tooltipEl = this.container.querySelector('#timeline-scrub-tooltip');
     this.currFrameInput = this.container.querySelector('#range-current');
     this.playFwdBtn = this.container.querySelector('#btn-play-fwd');
     this.playRevBtn = this.container.querySelector('#btn-play-rev');
@@ -76,10 +78,15 @@ export class MayaTimeline {
       const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const frame = Math.round(this.startFrame + pct * (this.endFrame - this.startFrame));
       this.setFrame(frame);
+      if (this.tooltipEl) {
+        this.tooltipEl.textContent = `Frame: ${frame}`;
+      }
     };
 
     this.sliderEl.addEventListener('mousedown', (e) => {
       isScrubbing = true;
+      document.body.style.cursor = 'col-resize';
+      if (this.tooltipEl) this.tooltipEl.style.display = 'block';
       scrub(e);
     });
 
@@ -88,7 +95,11 @@ export class MayaTimeline {
     });
 
     window.addEventListener('mouseup', () => {
-      isScrubbing = false;
+      if (isScrubbing) {
+        isScrubbing = false;
+        document.body.style.cursor = '';
+        if (this.tooltipEl) this.tooltipEl.style.display = 'none';
+      }
     });
 
     // Playback Buttons

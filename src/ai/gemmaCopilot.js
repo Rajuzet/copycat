@@ -1,13 +1,57 @@
+import { AdamConnectorClient } from '../adam/adamClient.js';
+import { AdamCopilot } from './adamCopilot.js';
+import { UniversalPromptLedger } from '../ledger/promptLedger.js';
+import { CadIntelligenceEngine } from './cadIntelligenceEngine.js';
+
 export class JwalaGemmaCopilot {
-  constructor(panelEl, mayaScene, primitivesLib, scriptEditor, onWorkspaceChange) {
+  constructor(panelEl, mayaScene, primitivesLib, scriptEditor, onWorkspaceChange, outliner = null, channelBox = null) {
     this.panel = panelEl;
     this.scene = mayaScene;
     this.primitives = primitivesLib;
     this.scriptEditor = scriptEditor;
     this.onWorkspaceChange = onWorkspaceChange;
+    this.outliner = outliner;
+    this.channelBox = channelBox;
+
+    this.adamClient = new AdamConnectorClient(this.scene, this.primitives, this.outliner, this.channelBox);
+    this.adamCopilot = new AdamCopilot(this.adamClient, this.scene, this.primitives, this.outliner, this.channelBox);
+    this.promptLedger = new UniversalPromptLedger(this.scene, this.primitives, this.outliner, this.channelBox);
+
+    this.intelligenceEngine = new CadIntelligenceEngine(this.promptLedger);
+    this.adamCopilot.intelligenceEngine.setPromptLedger(this.promptLedger);
+    this.promptLedger.setAdamBridge(this.adamClient, this.adamCopilot);
+
+    this.promptLedger.onInjectPromptCallback = (promptText) => {
+      this.activeTab = 'studio';
+      this.render();
+      if (this.promptInput) {
+        this.promptInput.value = promptText;
+        this.updateNlpDisplay(promptText);
+        this.generate(promptText);
+      }
+    };
+
+    this.promptLedger.onSwitchToAdamCad = (promptText) => {
+      this.activeTab = 'adam-cad';
+      this.render();
+      const adamInput = this.panel.querySelector('#adam-prompt-input');
+      if (adamInput) {
+        adamInput.value = promptText;
+      }
+      this.adamCopilot.processCadPrompt(promptText, this.panel);
+    };
+
+    this.adamClient.onStatusChange((status) => {
+      const statusEl = document.getElementById('adam-header-status-indicator');
+      if (statusEl) {
+        statusEl.className = `jwala-status-indicator ${status === 'connected' ? 'status-online' : ''}`;
+        statusEl.textContent = status === 'connected' ? '● Adam Online (8000)' : '○ Adam Offline';
+        statusEl.style.color = status === 'connected' ? 'var(--maya-green)' : '#888';
+      }
+    });
 
     this.modelName = 'google/gemma-4-12B-it-qat-q4_0-gguf';
-    this.activeTab = 'studio'; // 'studio', 'history', 'specs'
+    this.activeTab = 'studio'; // 'studio', 'adam-cad', 'adam-bridge', 'ledger', 'history', 'specs'
     this.activeMode = '3d'; // '3d', 'rig', 'shader', 'python', 'env'
     this.temperature = 0.7;
     this.isGenerating = false;
@@ -27,14 +71,19 @@ export class JwalaGemmaCopilot {
   }
 
   render() {
+    const isAdam = this.activeTab.startsWith('adam');
+    const isConnected = this.adamClient && this.adamClient.status === 'connected';
+
     this.panel.innerHTML = `
       <!-- Dedicated AI Space Titlebar -->
       <div class="jwala-dock-titlebar">
         <div class="jwala-dock-title">
-          <span>🔥</span>
-          <span>Jwala AI Studio</span>
-          <span class="jwala-model-tag" title="Model: google/gemma-4-12B-it-qat-q4_0-gguf">Gemma-4 12B GGUF</span>
-          <span class="jwala-status-indicator" title="Connected to Hugging Face Space">● Live</span>
+          <span>${isAdam ? '⚡' : '🔥'}</span>
+          <span>${isAdam ? 'Adam CAD Studio' : 'Jwala AI Studio'}</span>
+          <span class="jwala-model-tag">${isAdam ? 'Adam AI (adam.new)' : 'Gemma-4 12B GGUF'}</span>
+          <span id="adam-header-status-indicator" class="jwala-status-indicator ${isConnected ? 'status-online' : ''}" style="color: ${isConnected ? 'var(--maya-green)' : '#888'};">
+            ● ${isConnected ? 'Adam 8000 MCP' : 'Local MCP'}
+          </span>
         </div>
         
         <div class="jwala-space-layout-tools">
@@ -48,13 +97,22 @@ export class JwalaGemmaCopilot {
       <!-- AI Space Main Sub-Tabs -->
       <div class="jwala-space-subtabs">
         <div class="jwala-space-tab ${this.activeTab === 'studio' ? 'active' : ''}" data-tab="studio">
-          <span>✨ Generative Studio</span>
+          <span>✨ Gemma-4 Organic</span>
+        </div>
+        <div class="jwala-space-tab ${this.activeTab === 'adam-cad' ? 'active' : ''}" data-tab="adam-cad">
+          <span>⚡ Adam AI CAD</span>
+        </div>
+        <div class="jwala-space-tab ${this.activeTab === 'adam-bridge' ? 'active' : ''}" data-tab="adam-bridge">
+          <span>🔌 Adam Connector</span>
+        </div>
+        <div class="jwala-space-tab ${this.activeTab === 'ledger' ? 'active' : ''}" data-tab="ledger">
+          <span>📖 Universal Ledger</span>
         </div>
         <div class="jwala-space-tab ${this.activeTab === 'history' ? 'active' : ''}" data-tab="history">
-          <span>📦 3D Asset History (${this.history.length})</span>
+          <span>📦 History (${this.history.length})</span>
         </div>
         <div class="jwala-space-tab ${this.activeTab === 'specs' ? 'active' : ''}" data-tab="specs">
-          <span>⚙️ Gemma-4 Specs</span>
+          <span>⚙️ Specs</span>
         </div>
       </div>
 
@@ -68,6 +126,17 @@ export class JwalaGemmaCopilot {
   }
 
   renderActiveTabContent() {
+    if (this.activeTab === 'adam-cad') {
+      this.adamCopilot.activeSubtab = 'cad';
+      return this.adamCopilot.render();
+    }
+    if (this.activeTab === 'adam-bridge') {
+      this.adamCopilot.activeSubtab = 'bridge';
+      return this.adamCopilot.render();
+    }
+    if (this.activeTab === 'ledger') {
+      return this.promptLedger.render();
+    }
     if (this.activeTab === 'history') {
       return this.renderHistoryTab();
     }
@@ -113,6 +182,13 @@ export class JwalaGemmaCopilot {
             <span>Temp: <b id="temp-val-display" style="color: #ff9800;">${this.temperature}</b></span>
             <input type="range" id="jwala-temp-slider" min="0.1" max="1.0" step="0.1" value="${this.temperature}" style="width: 70px; height: 12px; cursor: pointer;" />
           </div>
+        </div>
+
+        <!-- Real-time NLP Semantic Intent Bar -->
+        <div class="jwala-nlp-bar" id="jwala-nlp-bar">
+          <span class="nlp-badge intent" id="nlp-intent-badge">🎯 Intent: <b>Procedural 3D Mesh</b></span>
+          <span class="nlp-badge scale" id="nlp-scale-badge">📏 Scale: <b>Domestic (10⁻¹ m)</b></span>
+          <span class="nlp-badge conf" id="nlp-conf-badge">📊 Confidence: <b>96%</b></span>
         </div>
 
         <textarea
@@ -257,7 +333,7 @@ export class JwalaGemmaCopilot {
           <p style="font-size: 10px; color: var(--maya-text-muted); margin-bottom: 6px;">
             Instructs Gemma-4 to generate valid Maya MEL and Python <code>maya.cmds</code> scripts.
           </p>
-          <textarea class="jwala-prompt-textarea" style="height: 90px; font-size: 10.5px;" readonly>You are Jwala, the dedicated AI Copilot for Autodesk Maya 2026.
+          <textarea class="jwala-prompt-textarea" style="height: 90px; font-size: 10.5px;" readonly>You are Jwala, the dedicated AI Copilot for 3D Studio.
 You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold aiStandardSurface PBR materials, and python maya.cmds automation.</textarea>
         </div>
       </div>
@@ -286,6 +362,20 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
   }
 
   bindTabContentEvents() {
+    if (this.activeTab === 'adam-cad' || this.activeTab === 'adam-bridge') {
+      if (this.adamCopilot) {
+        this.adamCopilot.bindEvents(this.panel);
+      }
+      return;
+    }
+
+    if (this.activeTab === 'ledger') {
+      if (this.promptLedger) {
+        this.promptLedger.bindEvents(this.panel);
+      }
+      return;
+    }
+
     if (this.activeTab === 'studio') {
       // Mode Pills
       this.panel.querySelectorAll('.jwala-mode-pill').forEach(pill => {
@@ -316,6 +406,13 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
       this.codeBox = this.panel.querySelector('#jwala-code-box');
       this.execute3dBtn = this.panel.querySelector('#jwala-execute-3d-btn');
 
+      this.promptInput?.addEventListener('input', () => {
+        this.updateNlpDisplay(this.promptInput.value);
+      });
+      if (this.promptInput) {
+        this.updateNlpDisplay(this.promptInput.value);
+      }
+
       this.submitBtn?.addEventListener('click', () => {
         this.generate(this.promptInput.value.trim());
       });
@@ -323,6 +420,7 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
       this.execute3dBtn?.addEventListener('click', () => {
         if (this.generatedAction) {
           this.generatedAction();
+          this.adamClient.syncSceneState();
           this.scriptEditor.log(`Jwala Gemma-4 action executed in viewport.`, 'res');
         }
       });
@@ -343,8 +441,8 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
           const name = btn.dataset.name;
           const obj = this.scene.objects.find(o => o.name === name);
           if (obj) {
-            this.scene.selectObject(obj.mesh);
-            this.scene.focusOnObject(obj.mesh);
+            this.scene.selectObject(obj);
+            this.scene.focusOnObject(obj);
           }
         });
       });
@@ -367,7 +465,7 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
             const item = this.history[idx];
             if (item.mesh) {
               this.scene.scene.remove(item.mesh);
-              this.scene.objects = this.scene.objects.filter(o => o.mesh !== item.mesh);
+              this.scene.objects = this.scene.objects.filter(o => o !== item.mesh);
               if (this.scene.selectedObject === item.mesh) {
                 this.scene.selectedObject = null;
                 this.scene.selectionBox.visible = false;
@@ -417,6 +515,7 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
       ];
     } else if (mode === 'env') {
       chips = [
+        { label: '🏔️ 3D Landscape', prompt: 'Generate a complete, fully detailed 3D landscape environment in a single run' },
         { label: '🏙️ Cyber Cityscape', prompt: 'Generate a multi-tower cyber cityscape array with glowing highways' },
         { label: '🪐 Landing Platform', prompt: 'Build a sci-fi hexagonal starship landing pad with perimeter beacons' }
       ];
@@ -452,10 +551,22 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
         const promptInput = this.panel.querySelector('#jwala-prompt-input');
         if (promptInput) {
           promptInput.value = chip.dataset.prompt;
+          this.updateNlpDisplay(chip.dataset.prompt);
           this.generate(chip.dataset.prompt);
         }
       });
     });
+  }
+
+  updateNlpDisplay(promptText) {
+    if (!this.intelligenceEngine) return;
+    const nlp = this.intelligenceEngine.parseIntent(promptText);
+    const intentBadge = this.panel.querySelector('#nlp-intent-badge');
+    const scaleBadge = this.panel.querySelector('#nlp-scale-badge');
+    const confBadge = this.panel.querySelector('#nlp-conf-badge');
+    if (intentBadge) intentBadge.innerHTML = `🎯 Intent: <b>${nlp.intent}</b>`;
+    if (scaleBadge) scaleBadge.innerHTML = `📏 Scale: <b>${nlp.scaleMeta.label}</b>`;
+    if (confBadge) confBadge.innerHTML = `📊 Confidence: <b>${(nlp.confidence * 100).toFixed(0)}%</b>`;
   }
 
   async generate(prompt) {
@@ -482,13 +593,42 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
     if (thoughtEl) thoughtEl.textContent = '';
     if (codeBox) codeBox.textContent = '';
 
+    // Run NLP Semantic Parser
+    const nlp = this.intelligenceEngine.parseIntent(prompt);
     const lower = prompt.toLowerCase();
-    let thoughts = [];
+    let thoughts = [
+      `[NLP Semantic Parser] Intent: ${nlp.intent} | Scale Order: ${nlp.scaleMeta.label} [${nlp.scaleMeta.order}] | Confidence: ${(nlp.confidence * 100).toFixed(0)}%`
+    ];
+    if (nlp.matchedLedgerItem) {
+      thoughts.push(`[Universal Ledger Link] Cross-referenced: "${nlp.matchedLedgerItem.name}" (${nlp.matchedLedgerItem.scale})`);
+    }
+
     let scriptCode = '';
     let actionFn = null;
     let assetMeta = { icon: '📦', type: '3D Procedural Mesh', name: 'jwala_mesh' };
 
-    if (lower.includes('mech') || lower.includes('robot') || lower.includes('arm')) {
+    if (lower.includes('los santos') || lower.includes('avenue') || lower.includes('downtown') || lower.includes('gta')) {
+      thoughts = [
+        'Model: google/gemma-4-12B-it-qat-q4_0-gguf [Principal Technical Art Director & Game Engine Architect]',
+        'Phase 1 [Autonomous Blueprint]: Partitioning Los Santos Downtown Avenue (160m x 120m metric bounds).',
+        'Anchor Architecture: Maze Bank Tower, Union Depository, 4 corporate high-rises with rooftop helipads.',
+        'Street Infrastructure: Dual-lane asphalt boulevard with crosswalks, sidewalk curbs, and 8 streetlamps with sodium emission glow.',
+        'Prop Ecosystem: Scattering sports coupes, parked sedans, and low-angle cinematic vehicle camera.',
+        'Phase 2 [Code Synthesis]: Formulating production maya.cmds Python script under |ENV_WORLD_ROOT.'
+      ];
+      scriptCode = `import maya.cmds as cmds\nimport math\nimport random\n\ndef build_complete_downtown_avenue():\n    cmds.refresh(suspend=True)\n    root = cmds.group(empty=True, name="ENV_WORLD_ROOT")\n    # Generate asphalt roadway, corporate towers, sidewalks, curbs, streetlamps, vehicles\n    cmds.jwala_createDowntownCity()\n    return root\n\nbuild_complete_downtown_avenue()`;
+      actionFn = () => {
+        const existing = this.scene.objects.find(o => o.name === 'ENV_WORLD_ROOT' || o.name === 'ENV_LANDSCAPE_ROOT');
+        if (existing) {
+          this.scene.scene.remove(existing);
+          this.scene.objects = this.scene.objects.filter(o => o !== existing);
+        }
+        const { mesh, name, propCount } = this.primitives.createDowntownCity();
+        this.scene.addObject(mesh, name);
+        this.scene.focusOnObject(mesh);
+        assetMeta = { icon: '🏙️', type: 'GTA Los Santos Downtown', name, mesh, polyCount: `5,280 Tris • 4 Towers • ${propCount} Props` };
+      };
+    } else if (lower.includes('mech') || lower.includes('robot') || lower.includes('arm')) {
       thoughts = [
         'Model: google/gemma-4-12B-it-qat-q4_0-gguf (Temperature: ' + this.temperature.toFixed(1) + ')',
         'Parsing intent: Synthesize articulated robotic bipedal mech with energy reactor.',
@@ -593,6 +733,93 @@ You generate valid Three.js procedural topologies, Maya DAG hierarchies, Arnold 
           if (i === 0) baseMesh = mesh;
         }
         assetMeta = { icon: '🌀', type: 'Spiral Staircase', name: 'spiralStairs_20', mesh: baseMesh, polyCount: '240 Tris' };
+      };
+    } else if (lower.includes('landscape') || lower.includes('environment') || lower.includes('terrain') || lower.includes('biome') || lower.includes('mountain')) {
+      thoughts = [
+        'Model: google/gemma-4-12B-it-qat-q4_0-gguf [Maya Technical Director & Automation Engine]',
+        'Phase 1 [Detail Expansion Layer]: Formulating production landscape spec (250m x 250m footprint, elevation delta 22m).',
+        'Hero Landmark: Ancient Obsidian Monolith Spire Citadel at origin with tiered plinths, 4 obelisk buttresses, and levitating runic core.',
+        'Ecosystem Distribution: Scattering 110 prop instances across 4 classes (basalt boulders, deadwood conifer trees, ancient megaliths, scree debris).',
+        'Lighting & Camera Rig: Key sun directional light (-38°, 48°, -12°), ambient fill light, 48mm perspective camera framed on hero landmark.',
+        'Phase 2 [Code Synthesis]: Generating robust maya.cmds Python automation routine wrapped in def generate_scene() under |ENV_LANDSCAPE_ROOT.'
+      ];
+      scriptCode = `import maya.cmds as cmds
+import math
+import random
+import time
+
+def generate_scene():
+    """
+    Jwala 3D Landscape Environment Generator
+    Generated by Jwala Gemma-4 12B Automation Engine
+    Hierarchy: |ENV_LANDSCAPE_ROOT
+    """
+    start_time = time.time()
+    cmds.refresh(suspend=True)
+    try:
+        # Root DAG Node
+        root_grp = cmds.group(empty=True, name='ENV_LANDSCAPE_ROOT')
+
+        # 1. Procedural Terrain (250m x 250m footprint)
+        terrain_grp = cmds.group(empty=True, name='TERRAIN_GRP', parent=root_grp)
+        terrain_nodes = cmds.polyPlane(w=250.0, h=250.0, sx=48, sy=48, name='pTerrain_Mesh')
+        terrain = terrain_nodes[0]
+        cmds.parent(terrain, terrain_grp)
+
+        # Deform terrain vertices with multi-octave harmonic elevations
+        num_vtx = cmds.polyEvaluate(terrain, vertex=True)
+        for i in range(num_vtx):
+            pos = cmds.pointPosition(f"{terrain}.vtx[{i}]", world=True)
+            dist = math.hypot(pos[0], pos[2])
+            plateau = min(1.0, math.pow(dist / 45.0, 2.2))
+            elev = (math.sin(pos[0] * 0.028) * math.cos(pos[2] * 0.028) * 16.5 +
+                    math.sin(pos[0] * 0.065 + pos[2] * 0.045) * 6.2) * plateau + max(0.0, (dist - 75.0) * 0.35)
+            cmds.move(0, elev, 0, f"{terrain}.vtx[{i}]", relative=True)
+
+        # 2. Hero Landmark (Ancient Obsidian Monolith Spire Citadel)
+        hero_grp = cmds.group(empty=True, name='HERO_LANDMARK_GRP', parent=root_grp)
+        p1 = cmds.polyCylinder(r=26.0, h=5.5, sc=6, name='hero_plinth_base')[0]
+        cmds.move(0, 2.75, 0, p1)
+        p2 = cmds.polyCylinder(r=17.5, h=4.5, sc=6, name='hero_plinth_tier2')[0]
+        cmds.move(0, 7.5, 0, p2)
+        spire = cmds.polyCylinder(r=6.5, h=62.0, sc=6, name='hero_monolith_spire')[0]
+        cmds.move(0, 38.0, 0, spire)
+        core = cmds.polyDodecahedron(r=4.8, name='hero_runic_core')[0]
+        cmds.move(0, 42.0, 0, core)
+        cmds.parent([p1, p2, spire, core], hero_grp)
+
+        # 3. Ecosystem Scatter (110 props)
+        scatter_grp = cmds.group(empty=True, name='ECOSYSTEM_SCATTER_GRP', parent=root_grp)
+        # Boulders, Conifer Trees, Megaliths, Debris
+        cmds.jwala_createLandscapeEnvironment()
+
+        # 4. Lighting & Camera Rig
+        light_grp = cmds.group(empty=True, name='LIGHTING_CAMERA_GRP', parent=root_grp)
+        sun = cmds.directionalLight(name='sun_directional_light')
+        sun_tf = cmds.listRelatives(sun, parent=True)[0]
+        cmds.setAttr(f"{sun_tf}.rotate", -38.0, 48.0, -12.0)
+        cmds.parent(sun_tf, light_grp)
+
+        cam_tuple = cmds.camera(name='hero_cinematic_camera', focalLength=48.0)
+        cmds.move(-95.0, 48.0, 115.0, cam_tuple[0])
+        cmds.parent(cam_tuple[0], light_grp)
+
+        elapsed = time.time() - start_time
+        return {
+            'root_node': '|ENV_LANDSCAPE_ROOT',
+            'status': 'SUCCESS',
+            'props_scattered': 110,
+            'execution_time_sec': round(elapsed, 3)
+        }
+    finally:
+        cmds.refresh(suspend=False)
+
+generate_scene()`;
+      actionFn = () => {
+        const { mesh, name, propCount } = this.primitives.createLandscapeEnvironment();
+        this.scene.addObject(mesh, name);
+        this.scene.focusOnObject(mesh);
+        assetMeta = { icon: '🏔️', type: '3D Landscape Environment', name, mesh, polyCount: `4,850 Tris • ${propCount} Props` };
       };
     } else {
       thoughts = [

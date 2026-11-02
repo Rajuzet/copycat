@@ -22,18 +22,16 @@ export class MayaChannelBox {
           <span>Display Layers</span>
           <button id="add-layer-btn" style="color: var(--maya-cyan); font-weight: 700;">+ New</button>
         </div>
-        <div style="flex: 1; padding: 4px; overflow-y: auto; font-family: var(--font-mono); font-size: 10px;">
-          <div style="display: flex; align-items: center; gap: 6px; padding: 2px 4px; background: rgba(255,255,255,0.05); border-radius: 2px;">
-            <span style="color: var(--maya-green); font-weight: 700;">V</span>
-            <span style="color: var(--maya-text-muted);">P</span>
-            <span style="color: var(--maya-text-muted);">R</span>
-            <span style="flex: 1; color: #fff;">defaultLayer</span>
-          </div>
-        </div>
+        <div id="maya-layers-list" style="flex: 1; padding: 4px; overflow-y: auto; font-family: var(--font-mono); font-size: 10px;"></div>
       </div>
     `;
 
+    this.layers = [
+      { name: 'defaultLayer', visible: true, playback: true, ref: false }
+    ];
+
     this.contentEl = this.container.querySelector('#channel-content');
+    this.layersListEl = this.container.querySelector('#maya-layers-list');
 
     const tabChannels = this.container.querySelector('#tab-channels');
     const tabAttributes = this.container.querySelector('#tab-attributes');
@@ -54,11 +52,75 @@ export class MayaChannelBox {
     tabAttributes.addEventListener('click', () => setActiveTab('attributes'));
     tabAi.addEventListener('click', () => setActiveTab('ai'));
 
-    this.scene.onSelectionChanged = () => {
-      this.render();
-    };
+    this.container.querySelector('#add-layer-btn')?.addEventListener('click', () => {
+      const newLayer = {
+        name: `layer${this.layers.length}`,
+        visible: true,
+        playback: true,
+        ref: false
+      };
+      this.layers.push(newLayer);
+      this.renderLayers();
+    });
 
+    this.scene.addSelectionListener(() => {
+      this.render();
+    });
+
+    this.scene.addTransformListener((obj) => {
+      if (this.activeTab === 'channels' && obj) {
+        this.updateChannelValues(obj);
+      }
+    });
+
+    this.renderLayers();
     this.render();
+  }
+
+  renderLayers() {
+    if (!this.layersListEl) return;
+    this.layersListEl.innerHTML = '';
+    this.layers.forEach((layer, idx) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; align-items: center; gap: 6px; padding: 2px 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 2px; cursor: pointer;';
+      row.innerHTML = `
+        <span class="layer-v-btn" style="color: ${layer.visible ? 'var(--maya-green)' : 'var(--maya-text-muted)'}; font-weight: 700; cursor: pointer;" title="Toggle Layer Visibility">V</span>
+        <span class="layer-p-btn" style="color: ${layer.playback ? '#fff' : 'var(--maya-text-muted)'}; font-weight: 600;" title="Playback on/off">P</span>
+        <span class="layer-r-btn" style="color: ${layer.ref ? '#ff9800' : 'var(--maya-text-muted)'}; font-weight: 600;" title="Reference / Template">R</span>
+        <span style="flex: 1; color: #fff; overflow: hidden; text-overflow: ellipsis;">${layer.name}</span>
+      `;
+      row.querySelector('.layer-v-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        layer.visible = !layer.visible;
+        this.renderLayers();
+      });
+      this.layersListEl.appendChild(row);
+    });
+  }
+
+  updateChannelValues(obj) {
+    if (!this.contentEl) return;
+    const tx = this.contentEl.querySelector('#inp-tx');
+    const ty = this.contentEl.querySelector('#inp-ty');
+    const tz = this.contentEl.querySelector('#inp-tz');
+    const rx = this.contentEl.querySelector('#inp-rx');
+    const ry = this.contentEl.querySelector('#inp-ry');
+    const rz = this.contentEl.querySelector('#inp-rz');
+    const sx = this.contentEl.querySelector('#inp-sx');
+    const sy = this.contentEl.querySelector('#inp-sy');
+    const sz = this.contentEl.querySelector('#inp-sz');
+
+    if (tx && document.activeElement !== tx) tx.value = obj.position.x.toFixed(3);
+    if (ty && document.activeElement !== ty) ty.value = obj.position.y.toFixed(3);
+    if (tz && document.activeElement !== tz) tz.value = obj.position.z.toFixed(3);
+
+    if (rx && document.activeElement !== rx) rx.value = (obj.rotation.x * (180 / Math.PI)).toFixed(1);
+    if (ry && document.activeElement !== ry) ry.value = (obj.rotation.y * (180 / Math.PI)).toFixed(1);
+    if (rz && document.activeElement !== rz) rz.value = (obj.rotation.z * (180 / Math.PI)).toFixed(1);
+
+    if (sx && document.activeElement !== sx) sx.value = obj.scale.x.toFixed(3);
+    if (sy && document.activeElement !== sy) sy.value = obj.scale.y.toFixed(3);
+    if (sz && document.activeElement !== sz) sz.value = obj.scale.z.toFixed(3);
   }
 
   render() {
@@ -214,19 +276,63 @@ export class MayaChannelBox {
     const sz = this.contentEl.querySelector('#inp-sz');
     const vis = this.contentEl.querySelector('#inp-vis');
 
-    tx?.addEventListener('input', () => { obj.position.x = parseFloat(tx.value) || 0; });
-    ty?.addEventListener('input', () => { obj.position.y = parseFloat(ty.value) || 0; });
-    tz?.addEventListener('input', () => { obj.position.z = parseFloat(tz.value) || 0; });
+    tx?.addEventListener('input', () => { obj.position.x = parseFloat(tx.value) || 0; this.scene.notifyTransformChanged(obj); });
+    ty?.addEventListener('input', () => { obj.position.y = parseFloat(ty.value) || 0; this.scene.notifyTransformChanged(obj); });
+    tz?.addEventListener('input', () => { obj.position.z = parseFloat(tz.value) || 0; this.scene.notifyTransformChanged(obj); });
 
-    rx?.addEventListener('input', () => { obj.rotation.x = ((parseFloat(rx.value) || 0) * Math.PI) / 180; });
-    ry?.addEventListener('input', () => { obj.rotation.y = ((parseFloat(ry.value) || 0) * Math.PI) / 180; });
-    rz?.addEventListener('input', () => { obj.rotation.z = ((parseFloat(rz.value) || 0) * Math.PI) / 180; });
+    rx?.addEventListener('input', () => { obj.rotation.x = ((parseFloat(rx.value) || 0) * Math.PI) / 180; this.scene.notifyTransformChanged(obj); });
+    ry?.addEventListener('input', () => { obj.rotation.y = ((parseFloat(ry.value) || 0) * Math.PI) / 180; this.scene.notifyTransformChanged(obj); });
+    rz?.addEventListener('input', () => { obj.rotation.z = ((parseFloat(rz.value) || 0) * Math.PI) / 180; this.scene.notifyTransformChanged(obj); });
 
-    sx?.addEventListener('input', () => { obj.scale.x = parseFloat(sx.value) || 1; });
-    sy?.addEventListener('input', () => { obj.scale.y = parseFloat(sy.value) || 1; });
-    sz?.addEventListener('input', () => { obj.scale.z = parseFloat(sz.value) || 1; });
+    sx?.addEventListener('input', () => { obj.scale.x = parseFloat(sx.value) || 1; this.scene.notifyTransformChanged(obj); });
+    sy?.addEventListener('input', () => { obj.scale.y = parseFloat(sy.value) || 1; this.scene.notifyTransformChanged(obj); });
+    sz?.addEventListener('input', () => { obj.scale.z = parseFloat(sz.value) || 1; this.scene.notifyTransformChanged(obj); });
 
     vis?.addEventListener('change', () => { obj.visible = vis.value === 'on'; });
+
+    // Maya Virtual Slider Scrubbing on Channel Labels
+    const setupScrubber = (labelId, inputEl, getter, setter, step = 0.05, isDegree = false) => {
+      const lbl = this.contentEl.querySelector(labelId);
+      if (!lbl || !inputEl) return;
+
+      lbl.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const initialVal = getter();
+        lbl.classList.add('scrubbing');
+        document.body.style.cursor = 'ew-resize';
+
+        const onMouseMove = (ev) => {
+          const delta = (ev.clientX - startX) * (ev.shiftKey ? step * 0.2 : step);
+          const newVal = initialVal + delta;
+          setter(newVal);
+          inputEl.value = isDegree ? newVal.toFixed(1) : newVal.toFixed(3);
+          this.scene.notifyTransformChanged(obj);
+        };
+
+        const onMouseUp = () => {
+          lbl.classList.remove('scrubbing');
+          document.body.style.cursor = '';
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
+    };
+
+    setupScrubber('#lbl-tx', tx, () => obj.position.x, (v) => { obj.position.x = v; }, 0.05);
+    setupScrubber('#lbl-ty', ty, () => obj.position.y, (v) => { obj.position.y = v; }, 0.05);
+    setupScrubber('#lbl-tz', tz, () => obj.position.z, (v) => { obj.position.z = v; }, 0.05);
+
+    setupScrubber('#lbl-rx', rx, () => (obj.rotation.x * 180) / Math.PI, (v) => { obj.rotation.x = (v * Math.PI) / 180; }, 1.0, true);
+    setupScrubber('#lbl-ry', ry, () => (obj.rotation.y * 180) / Math.PI, (v) => { obj.rotation.y = (v * Math.PI) / 180; }, 1.0, true);
+    setupScrubber('#lbl-rz', rz, () => (obj.rotation.z * 180) / Math.PI, (v) => { obj.rotation.z = (v * Math.PI) / 180; }, 1.0, true);
+
+    setupScrubber('#lbl-sx', sx, () => obj.scale.x, (v) => { obj.scale.x = Math.max(0.01, v); }, 0.02);
+    setupScrubber('#lbl-sy', sy, () => obj.scale.y, (v) => { obj.scale.y = Math.max(0.01, v); }, 0.02);
+    setupScrubber('#lbl-sz', sz, () => obj.scale.z, (v) => { obj.scale.z = Math.max(0.01, v); }, 0.02);
   }
 
   renderAttributeEditor(obj) {

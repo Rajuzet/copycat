@@ -24,9 +24,9 @@ export class MayaOutliner {
     this.treeList = this.container.querySelector('#outliner-tree-list');
 
     // Subscribe to scene changes
-    this.scene.onSelectionChanged = (obj) => {
+    this.scene.addSelectionListener((obj) => {
       this.updateSelection(obj);
-    };
+    });
 
     this.container.querySelector('#outliner-refresh-btn').addEventListener('click', () => {
       this.render();
