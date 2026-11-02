@@ -1,15 +1,14 @@
 {
-  "name": "jwala-maya-ai",
+  "name": "canvascord-studio",
   "version": "1.0.0",
+  "description": "CanvasCord - Real-Time Collaborative Design Studio + Discord Community Hub with AI Copilot",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "bridge": "node server/adamBridge.js",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "three": "^0.186.1",
     "lucide": "^0.479.0"
   },
   "devDependencies": {
