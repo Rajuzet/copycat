@@ -1,0 +1,70 @@
+{
+  "model_name": "CanvasCord-Design-LM-v1",
+  "eval_loss": 1.8409219980239868,
+  "benchmark_tests": 6,
+  "validity_rate_pct": 100.0,
+  "avg_latency_ms": 767.62,
+  "wcag_compliance_pct": 100.0,
+  "results": [
+    {
+      "test_id": "bench_1",
+      "prompt": "Design a high-converting hero section with newsletter email input and submit button",
+      "category": "landing_page",
+      "latency_ms": 950.39,
+      "valid_json": true,
+      "element_count": 3,
+      "wcag_aa_compliance": true,
+      "status": "PASSED"
+    },
+    {
+      "test_id": "bench_2",
+      "prompt": "Create an analytics chart card with title, metrics and secondary badge",
+      "category": "analytics",
+      "latency_ms": 661.42,
+      "valid_json": true,
+      "element_count": 2,
+      "wcag_aa_compliance": true,
+      "status": "PASSED"
+    },
+    {
+      "test_id": "bench_3",
+      "prompt": "Generate a mobile navigation bar with 4 bottom tab icons",
+      "category": "mobile_app",
+      "latency_ms": 588.91,
+      "valid_json": true,
+      "element_count": 3,
+      "wcag_aa_compliance": true,
+      "status": "PASSED"
+    },
+    {
+      "test_id": "bench_4",
+      "prompt": "Build a customer feedback testimonial quote card with avatar",
+      "category": "card_ui",
+      "latency_ms": 645.63,
+      "valid_json": true,
+      "element_count": 3,
+      "wcag_aa_compliance": true,
+      "status": "PASSED"
+    },
+    {
+      "test_id": "bench_5",
+      "prompt": "Design an accessible dark mode alert dialog box",
+      "category": "dialog",
+      "latency_ms": 892.06,
+      "valid_json": true,
+      "element_count": 3,
+      "wcag_aa_compliance": true,
+      "status": "PASSED"
+    },
+    {
+      "test_id": "bench_6",
+      "prompt": "Generate a 4-step horizontal checkout stepper with connector arrows",
+      "category": "flowchart",
+      "latency_ms": 867.29,
+      "valid_json": true,
+      "element_count": 3,
+      "wcag_aa_compliance": true,
+      "status": "PASSED"
+    }
+  ]
+}

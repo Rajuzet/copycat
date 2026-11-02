@@ -1544,3 +1544,164 @@ input, textarea, select {
   cursor: pointer;
 }
 
+/* --------------------------------------------------------------------------
+   7. Deep Synergy Between Canvas, Discord & AI
+   -------------------------------------------------------------------------- */
+.share-to-discord-btn {
+  width: 100%;
+  background-color: var(--discord-blurple);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(88, 101, 242, 0.3);
+}
+
+.share-to-discord-btn:hover {
+  background-color: #4752c4;
+  transform: translateY(-1px);
+}
+
+.msg-synergy-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.msg-mini-action {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.msg-mini-action:hover {
+  color: #fff;
+  border-color: var(--discord-blurple);
+  background-color: var(--discord-blurple);
+}
+
+.shared-element-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-darkest);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.btn-locate-canvas {
+  background-color: var(--figma-blue);
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.btn-locate-canvas:hover {
+  background-color: #0b80d6;
+}
+
+/* Voice Tools: Presentation & Laser */
+.voice-tools-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voice-action-pill {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.voice-action-pill:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.voice-action-pill.active {
+  background-color: var(--discord-fuchsia);
+  border-color: var(--discord-fuchsia);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(235, 69, 158, 0.4);
+}
+
+.hf-config-btn {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-normal);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.hf-config-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--discord-yellow);
+}
+
+.hf-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.hf-select, .hf-input {
+  background-color: var(--bg-darkest);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-normal);
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.hf-select:focus, .hf-input:focus {
+  border-color: var(--discord-blurple);
+}
+
+.fit-btn.secondary {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-normal);
+}
+
+.fit-btn.secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+

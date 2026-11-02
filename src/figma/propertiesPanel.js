@@ -1,12 +1,13 @@
 /**
- * CanvasCord Figma Design Inspector, Properties & CSS Code Generator
+ * CanvasCord Figma Design Inspector, Properties, CSS Code Generator & Discord Bridge
  */
 
 export class PropertiesPanel {
-  constructor(container, engine, onUpdate) {
+  constructor(container, engine, onUpdate, onShareToDiscord) {
     this.container = container;
     this.engine = engine;
     this.onUpdate = onUpdate || (() => {});
+    this.onShareToDiscord = onShareToDiscord || (() => {});
     this.activeTab = 'design'; // 'design' | 'code' | 'export'
   }
 
@@ -32,14 +33,13 @@ export class PropertiesPanel {
               <span class="prop-value-badge">${this.engine.elements.length}</span>
             </div>
             <button class="fit-btn" id="btn-fit-screen">Fit All to Screen</button>
+            <button class="fit-btn secondary" id="btn-export-all-tokens" style="margin-top:8px">Export Design Tokens JSON</button>
           </div>
         </div>
       `;
 
-      const fitBtn = this.container.querySelector('#btn-fit-screen');
-      if (fitBtn) {
-        fitBtn.addEventListener('click', () => this.engine.fitToScreen());
-      }
+      this.container.querySelector('#btn-fit-screen')?.addEventListener('click', () => this.engine.fitToScreen());
+      this.container.querySelector('#btn-export-all-tokens')?.addEventListener('click', () => this.exportAllTokens());
       return;
     }
 
@@ -73,6 +73,13 @@ export class PropertiesPanel {
         <button class="align-btn" data-align="top" title="Align Top">⤒</button>
         <button class="align-btn" data-align="center-v" title="Align Vertical Centers">⤓⤒</button>
         <button class="align-btn" data-align="bottom" title="Align Bottom">⤓</button>
+      </div>
+
+      <!-- Quick Action: Share to Discord -->
+      <div class="prop-section">
+        <button class="share-to-discord-btn" id="btn-share-selection-discord">
+          <span>💬 Share to #design-critique</span>
+        </button>
       </div>
 
       <!-- Geometry -->
@@ -293,6 +300,42 @@ export class PropertiesPanel {
     return classes.join(' ');
   }
 
+  exportAllTokens() {
+    const colors = new Set();
+    this.engine.elements.forEach(el => {
+      if (el.fill && el.fill !== 'transparent') colors.add(el.fill);
+      if (el.stroke && el.strokeWidth > 0) colors.add(el.stroke);
+    });
+
+    const tokens = {
+      name: 'CanvasCord Design System Tokens',
+      version: '1.0.0',
+      color: Array.from(colors),
+      borderRadius: {
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+        full: '9999px',
+      },
+      fontFamily: {
+        sans: 'Inter, -apple-system, sans-serif',
+        mono: 'JetBrains Mono, monospace',
+      },
+      boxShadow: {
+        glow: '0 8px 32px rgba(88, 101, 242, 0.35)',
+        card: '0 4px 16px rgba(0, 0, 0, 0.4)',
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(tokens, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'design-tokens.json';
+    a.click();
+  }
+
   sanitizeColor(hex) {
     if (!hex || hex === 'transparent' || !hex.startsWith('#') || hex.length < 7) {
       return '#5865F2';
@@ -301,7 +344,6 @@ export class PropertiesPanel {
   }
 
   bindTabEvents(el) {
-    // Tab switching
     this.container.querySelectorAll('.prop-tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.activeTab = btn.dataset.tab;
@@ -311,6 +353,12 @@ export class PropertiesPanel {
 
     if (this.activeTab === 'design') {
       this.bindDesignInputs(el);
+      const shareBtn = this.container.querySelector('#btn-share-selection-discord');
+      if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+          this.onShareToDiscord(el);
+        });
+      }
     } else if (this.activeTab === 'code') {
       const copyCss = this.container.querySelector('#btn-copy-css');
       if (copyCss) {
@@ -355,7 +403,6 @@ export class PropertiesPanel {
     bindNum('#prop-opacity', 'opacity');
     bindNum('#prop-font-size', 'fontSize');
 
-    // Color inputs
     const fillColor = this.container.querySelector('#prop-fill-color');
     const fillHex = this.container.querySelector('#prop-fill-hex');
     if (fillColor && fillHex) {
@@ -373,7 +420,6 @@ export class PropertiesPanel {
       });
     }
 
-    // Color Swatches
     this.container.querySelectorAll('.swatch').forEach(sw => {
       sw.addEventListener('click', () => {
         el.fill = sw.dataset.color;
@@ -384,7 +430,6 @@ export class PropertiesPanel {
       });
     });
 
-    // Stroke Color
     const strokeColor = this.container.querySelector('#prop-stroke-color');
     const strokeHex = this.container.querySelector('#prop-stroke-hex');
     if (strokeColor && strokeHex) {
@@ -402,7 +447,6 @@ export class PropertiesPanel {
       });
     }
 
-    // Shadow toggle & blur
     const shadowToggle = this.container.querySelector('#prop-shadow-toggle');
     if (shadowToggle) {
       shadowToggle.addEventListener('change', e => {
@@ -416,7 +460,6 @@ export class PropertiesPanel {
 
     bindNum('#prop-shadow-blur', 'blur');
 
-    // Text content
     const textContent = this.container.querySelector('#prop-text-content');
     if (textContent) {
       textContent.addEventListener('input', e => {
@@ -426,7 +469,6 @@ export class PropertiesPanel {
       });
     }
 
-    // Align buttons
     this.container.querySelectorAll('.align-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.alignElement(el, btn.dataset.align);
@@ -515,4 +557,3 @@ export class PropertiesPanel {
     }
   }
 }
-

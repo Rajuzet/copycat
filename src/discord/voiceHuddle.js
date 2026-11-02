@@ -1,13 +1,17 @@
 /**
- * CanvasCord Voice Huddle & Web Audio Visualizer
+ * CanvasCord Voice Huddle, Web Audio Visualizer & Interactive Screen Presentation Mode
  */
 
 export class VoiceHuddle {
-  constructor(container, voiceState, onToggleMute) {
+  constructor(container, voiceState, onToggleMute, onToggleLaser, onTogglePresent) {
     this.container = container;
     this.voiceState = voiceState;
     this.onToggleMute = onToggleMute || (() => {});
+    this.onToggleLaser = onToggleLaser || (() => {});
+    this.onTogglePresent = onTogglePresent || (() => {});
     this.animId = null;
+    this.isPresenting = false;
+    this.isLaserOn = false;
   }
 
   render() {
@@ -45,7 +49,7 @@ export class VoiceHuddle {
 
         <!-- Real-time Web Audio Waveform Canvas -->
         <div class="voice-waveform-container">
-          <canvas id="voice-waveform-canvas" width="120" height="28"></canvas>
+          <canvas id="voice-waveform-canvas" width="100" height="26"></canvas>
         </div>
 
         <!-- Participants Heads -->
@@ -56,6 +60,16 @@ export class VoiceHuddle {
               ${p.isMuted ? `<span class="avatar-mute-badge">🔇</span>` : ''}
             </div>
           `).join('')}
+        </div>
+
+        <!-- Collaborative Presentation Tools -->
+        <div class="voice-tools-group">
+          <button class="voice-action-pill ${this.isPresenting ? 'active' : ''}" id="btn-present-canvas" title="Broadcast your canvas viewport to team">
+            <span>📡 Present Canvas</span>
+          </button>
+          <button class="voice-action-pill ${this.isLaserOn ? 'active' : ''}" id="btn-laser-pointer" title="Laser Pointer for live walkthroughs">
+            <span>🔴 Laser</span>
+          </button>
         </div>
 
         <!-- Controls -->
@@ -103,6 +117,24 @@ export class VoiceHuddle {
         this.render();
       });
     }
+
+    const presentBtn = this.container.querySelector('#btn-present-canvas');
+    if (presentBtn) {
+      presentBtn.addEventListener('click', () => {
+        this.isPresenting = !this.isPresenting;
+        this.onTogglePresent(this.isPresenting);
+        this.render();
+      });
+    }
+
+    const laserBtn = this.container.querySelector('#btn-laser-pointer');
+    if (laserBtn) {
+      laserBtn.addEventListener('click', () => {
+        this.isLaserOn = !this.isLaserOn;
+        this.onToggleLaser(this.isLaserOn);
+        this.render();
+      });
+    }
   }
 
   startWaveformAnimation() {
@@ -122,18 +154,17 @@ export class VoiceHuddle {
         ctx.lineTo(canvas.width, canvas.height / 2);
         ctx.stroke();
       } else {
-        // Draw lively audio frequencies
-        const barCount = 14;
-        const barWidth = 4;
-        const gap = 4;
+        const barCount = 12;
+        const barWidth = 3.5;
+        const gap = 3.5;
         const totalW = barCount * (barWidth + gap);
         const startX = (canvas.width - totalW) / 2;
 
-        ctx.fillStyle = '#57F287'; // Discord speaking green
+        ctx.fillStyle = '#57F287';
 
         for (let i = 0; i < barCount; i++) {
           const heightFactor = Math.sin(phase + i * 0.6) * 0.5 + 0.5;
-          const barHeight = Math.max(3, heightFactor * 22);
+          const barHeight = Math.max(3, heightFactor * 20);
           const y = (canvas.height - barHeight) / 2;
           const x = startX + i * (barWidth + gap);
 
@@ -141,7 +172,7 @@ export class VoiceHuddle {
           ctx.roundRect(x, y, barWidth, barHeight, 2);
           ctx.fill();
         }
-        phase += 0.08;
+        phase += 0.09;
       }
 
       this.animId = requestAnimationFrame(draw);
@@ -151,4 +182,3 @@ export class VoiceHuddle {
     this.animId = requestAnimationFrame(draw);
   }
 }
-

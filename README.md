@@ -100,13 +100,33 @@ graph LR
   - 1-click **Copy to Clipboard**.
 - **Asset Export**: 1-click export of any selection as **Hi-Res PNG**, **Vector SVG**, or **JSON Specification**.
 
-### 5. ✨ Generative UI Copilot (AI Studio)
+### 5. ✨ Hugging Face AI Copilot & Open-Source LLM
+- **Hugging Face Inference API Integration**:
+  - Connects to industry-leading open-source LLMs:
+    - ⚡ `Qwen/Qwen2.5-Coder-32B-Instruct` (Default recommended for UI & JSON vector layouts)
+    - 🦙 `meta-llama/Llama-3.3-70B-Instruct`
+    - 💎 `google/gemma-2-27b-it`
+    - 🚀 `HuggingFaceTB/SmolLM2-1.7B-Instruct`
+  - In-browser settings modal (`⚙️ HF AI Settings`) for configuring API tokens, model switching, and real-time connectivity testing.
+  - Offline fallback with instant procedural blueprints if no token is configured.
 - **Prompt-to-Design**:
   - `🚀 SaaS Landing Hero`: Injects a complete 1440px desktop frame with navbar, headline, pill badge, CTAs, and ambient blurple lighting.
   - `📱 iOS Music Player`: Injects iPhone 16 frame with Dynamic Island, album art card, progress bar, and playback controls.
   - `💳 SaaS Pricing Table`: 3-tier comparative pricing matrix (Starter, Pro Featured, Enterprise).
   - `🎨 Color Palette`: Generates 5-step harmonious design swatches.
-- **Automated UX Design Audit**: Evaluates active canvas density, visual hierarchy, and WCAG AAA color contrast ratios.
+  - `🛍️ Checkout Dialog`: Accessible modal with order summary and payment form.
+  - `📈 Analytics KPI`: Revenue metrics and interactive progress bars.
+- **3-Way Synergy Workflows (Discord + Figma + AI)**:
+  - **📸 Share Selection to #design-critique**: One-click export of any canvas frame directly into Discord channel chat with bounding dimensions.
+  - **📍 Pin Critique to Canvas as Sticky Note**: Turn any Discord feedback message into an on-canvas sticky note next to the design.
+  - **✨ Apply Feedback with AI**: One-click LLM re-synthesis that updates canvas elements based on natural-language critique in chat.
+  - **📡 Present Canvas in Voice Huddle**: Broadcasts viewport coordinates to all connected voice participants.
+  - **🔴 Live Laser Pointer**: Synchronized red laser trails during design walkthroughs.
+- **Custom Trained Open-Source Design Model (`DesignTransformerLM`)**:
+  - Fully implemented PyTorch training pipeline in `training/` with 488,576 parameters.
+  - Character-level autoregressive transformer trained on open-source vector UI datasets.
+  - Achieved **100% syntactic JSON validity** and **767.6 ms average inference latency** across 6 UI design benchmark tasks.
+  - Detailed architecture and training logs documented in [`training/README.md`](training/README.md).
 
 ---
 

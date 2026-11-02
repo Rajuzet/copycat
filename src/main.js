@@ -11,7 +11,9 @@ import { DiscordChat } from './discord/discordChat.js';
 import { VoiceHuddle } from './discord/voiceHuddle.js';
 import { MultiplayerPresence } from './presence/multiplayer.js';
 import { AICopilot } from './ai/aiCopilot.js';
+import { SUPPORTED_HF_MODELS } from './ai/huggingFaceClient.js';
 import { createSaaSHeroTemplate } from './ai/templates.js';
+import { createElement } from './canvas/elements.js';
 import { INITIAL_DISCORD_STATE } from './discord/discordState.js';
 
 class CanvasCordApp {
@@ -199,6 +201,11 @@ class CanvasCordApp {
                 <span class="collab-count">+2 online</span>
               </div>
 
+              <!-- Hugging Face AI Settings Button -->
+              <button class="hf-config-btn" id="btn-open-hf-config" title="Configure Hugging Face Open-Source Model">
+                <span>🤗 HF LLM</span>
+              </button>
+
               <!-- AI Copilot Button -->
               <button class="ai-copilot-btn" id="btn-ai-prompt-trigger">
                 <span>✨ AI Studio</span>
@@ -266,10 +273,51 @@ class CanvasCordApp {
                 <strong>Discord Color Palette</strong>
                 <small>Harmonious 5-step UI swatches</small>
               </button>
+              <button class="ai-preset-card" data-preset="checkout">
+                <span class="ai-preset-emoji">🛒</span>
+                <strong>Checkout Funnel</strong>
+                <small>Card input & Apple Pay CTA</small>
+              </button>
+              <button class="ai-preset-card" data-preset="stats">
+                <span class="ai-preset-emoji">📊</span>
+                <strong>Analytics KPIs</strong>
+                <small>3-card metric metrics delta</small>
+              </button>
             </div>
             <div class="ai-input-wrap">
               <input type="text" id="ai-modal-prompt-input" placeholder="e.g. Generate dark mode checkout card with Apple Pay button" />
               <button class="ai-generate-btn" id="btn-run-ai-generate">Synthesize</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hugging Face AI Configuration Modal -->
+      <div class="ai-modal-backdrop" id="hf-config-modal" style="display:none">
+        <div class="ai-modal-card">
+          <div class="ai-modal-header">
+            <div class="ai-modal-title">🤗 Hugging Face Open-Source LLM Settings</div>
+            <button class="ai-modal-close" id="btn-close-hf-modal">✕</button>
+          </div>
+          <div class="ai-modal-body">
+            <p class="ai-modal-desc">Connect top-performing open-source coding and UI reasoning models via Hugging Face Inference API:</p>
+            <div class="hf-field-group">
+              <label>Select Open-Source Model</label>
+              <select id="hf-model-select" class="hf-select">
+                ${SUPPORTED_HF_MODELS.map(m => `
+                  <option value="${m.id}">${m.name}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="hf-field-group" style="margin-top:10px">
+              <label>Hugging Face User Access Token (Optional / Free)</label>
+              <input type="password" id="hf-token-input" placeholder="hf_..." class="hf-input" />
+              <small style="color:var(--text-muted);margin-top:4px;display:block">
+                Leave blank to use built-in procedural heuristic design intelligence, or supply a free HF token from huggingface.co/settings/tokens.
+              </small>
+            </div>
+            <div class="hf-modal-footer" style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px">
+              <button class="fit-btn" id="btn-save-hf-config">Save Settings</button>
             </div>
           </div>
         </div>
@@ -290,7 +338,8 @@ class CanvasCordApp {
       () => {
         this.layersTree.render();
         this.propertiesPanel.render();
-      }
+      },
+      el => this.shareElementToDiscord(el)
     );
   }
 
@@ -304,7 +353,7 @@ class CanvasCordApp {
       () => this.engine.requestRender()
     );
 
-    // 2. Properties Panel
+    // 2. Properties Panel with Synergy bridge
     const propsContainer = document.getElementById('properties-panel-container');
     this.propertiesPanel = new PropertiesPanel(
       propsContainer,
@@ -312,7 +361,8 @@ class CanvasCordApp {
       () => {
         this.layersTree.render();
         this.engine.requestRender();
-      }
+      },
+      el => this.shareElementToDiscord(el)
     );
 
     // 3. AI Copilot
@@ -321,23 +371,124 @@ class CanvasCordApp {
       this.propertiesPanel.render();
     });
 
-    // 4. Discord Chat
+    // 4. Discord Chat with Pinning & Locate Synergy
     const chatContainer = document.getElementById('discord-chat-container');
-    this.chat = new DiscordChat(chatContainer, this.discordState, prompt => {
-      return this.copilot.processPrompt(prompt);
-    });
+    this.chat = new DiscordChat(
+      chatContainer,
+      this.discordState,
+      prompt => this.copilot.processPrompt(prompt),
+      (text, author) => this.pinCommentToCanvas(text, author),
+      elId => this.locateElementOnCanvas(elId)
+    );
     this.chat.render();
 
-    // 5. Voice Huddle
+    // 5. Voice Huddle with Presentation Mode & Laser Pointer
     const voiceContainer = document.getElementById('voice-huddle-bar-container');
-    this.voiceHuddle = new VoiceHuddle(voiceContainer, this.discordState.voice, isMuted => {
-      const micBtn = document.getElementById('btn-toggle-mic');
-      if (micBtn) micBtn.textContent = isMuted ? '🔇' : '🎙️';
-    });
+    this.voiceHuddle = new VoiceHuddle(
+      voiceContainer,
+      this.discordState.voice,
+      isMuted => {
+        const micBtn = document.getElementById('btn-toggle-mic');
+        if (micBtn) micBtn.textContent = isMuted ? '🔇' : '🎙️';
+      },
+      isLaserOn => {
+        this.tools.setTool(isLaserOn ? 'laser' : 'select');
+        this.engine.laserTrail = this.tools.laserTrail;
+      },
+      isPresenting => {
+        const statusText = document.querySelector('.save-status');
+        if (statusText) {
+          statusText.textContent = isPresenting ? '📡 Presenting Live to Huddle' : '• Saved to Cloud';
+          statusText.style.color = isPresenting ? '#EB459E' : '#57F287';
+        }
+      }
+    );
     this.voiceHuddle.render();
 
     // 6. Multiplayer Presence
     this.presence = new MultiplayerPresence(this.engine);
+  }
+
+  /**
+   * Synergy 1: Share selected canvas element/frame to Discord channel
+   */
+  shareElementToDiscord(el) {
+    const channelId = this.discordState.activeChannelId;
+    if (!this.discordState.messages[channelId]) this.discordState.messages[channelId] = [];
+
+    const shareMsg = {
+      id: 'msg_share_' + Date.now(),
+      author: {
+        name: this.discordState.currentUser.name,
+        role: 'Designer',
+        badge: 'YOU',
+        avatar: this.discordState.currentUser.avatar,
+        color: '#EB459E',
+      },
+      time: 'Just now',
+      content: `📸 **Shared Canvas Component**: *${el.name}*\n` +
+        `• **Dimensions**: ${Math.round(el.width)}×${Math.round(el.height)}px\n` +
+        `• **Fill**: \`${el.fill}\` | **Corner Radius**: \`${el.cornerRadius || 0}px\`\n` +
+        `• **Status**: Pushed to team channel for visual feedback & review! ✨`,
+      targetElementId: el.id,
+      targetElementName: el.name,
+      reactions: [
+        { emoji: '👀', count: 2, active: true },
+        { emoji: '🔥', count: 1, active: false },
+      ],
+    };
+
+    this.discordState.messages[channelId].push(shareMsg);
+    this.chat.render();
+
+    // Ensure chat drawer is open
+    if (!this.chatOpen) {
+      this.chatOpen = true;
+      document.getElementById('discord-chat-container')?.classList.add('open');
+      document.getElementById('btn-toggle-chat')?.classList.add('active');
+    }
+  }
+
+  /**
+   * Synergy 2: Pin a Discord discussion comment onto the canvas
+   */
+  pinCommentToCanvas(text, author) {
+    const cx = Math.round(-this.engine.viewport.x + this.engine.width / (2 * this.engine.viewport.zoom));
+    const cy = Math.round(-this.engine.viewport.y + this.engine.height / (2 * this.engine.viewport.zoom));
+
+    const sticky = createElement('sticky', {
+      name: `Pin // ${author}`,
+      x: cx - 90 + (Math.random() * 40 - 20),
+      y: cy - 70 + (Math.random() * 40 - 20),
+      text: `📍 ${author}:\n${text.slice(0, 140)}...`,
+      author: author,
+      fill: '#FEE75C',
+    });
+
+    this.engine.elements.push(sticky);
+    this.engine.selectedIds.clear();
+    this.engine.selectedIds.add(sticky.id);
+    this.engine.requestRender();
+    this.layersTree.render();
+    this.propertiesPanel.render();
+  }
+
+  /**
+   * Synergy 3: Glide camera to target element from Discord mention
+   */
+  locateElementOnCanvas(elId) {
+    const el = this.engine.elements.find(i => i.id === elId);
+    if (!el) return;
+
+    this.engine.selectedIds.clear();
+    this.engine.selectedIds.add(el.id);
+
+    this.engine.viewport.x = this.engine.width / 2 - (el.x + el.width / 2) * this.engine.viewport.zoom;
+    this.engine.viewport.y = this.engine.height / 2 - (el.y + el.height / 2) * this.engine.viewport.zoom;
+
+    this.engine.requestRender();
+    this.layersTree.render();
+    this.propertiesPanel.render();
   }
 
   bindGlobalEvents() {
@@ -432,14 +583,13 @@ class CanvasCordApp {
       });
     }
 
-    const runGenerate = () => {
+    const runGenerate = async () => {
       const text = promptInput.value.trim();
       if (!text) return;
       promptInput.value = '';
       aiModal.style.display = 'none';
 
-      const response = this.copilot.processPrompt(text);
-      // Also post to active Discord chat
+      const response = await this.copilot.processPrompt(text);
       const channelId = this.discordState.activeChannelId;
       if (!this.discordState.messages[channelId]) this.discordState.messages[channelId] = [];
       this.discordState.messages[channelId].push({
@@ -474,7 +624,37 @@ class CanvasCordApp {
       });
     });
 
-    // Update Zoom Indicator on canvas actions
+    // Hugging Face Config Modal
+    const hfModal = document.getElementById('hf-config-modal');
+    const hfOpenBtn = document.getElementById('btn-open-hf-config');
+    const hfCloseBtn = document.getElementById('btn-close-hf-modal');
+    const hfSaveBtn = document.getElementById('btn-save-hf-config');
+    const hfSelect = document.getElementById('hf-model-select');
+    const hfInput = document.getElementById('hf-token-input');
+
+    if (hfOpenBtn && hfModal) {
+      hfOpenBtn.addEventListener('click', () => {
+        hfModal.style.display = 'flex';
+        if (hfSelect) hfSelect.value = this.copilot.hfClient.selectedModel;
+        if (hfInput) hfInput.value = this.copilot.hfClient.apiKey;
+      });
+    }
+
+    if (hfCloseBtn && hfModal) {
+      hfCloseBtn.addEventListener('click', () => {
+        hfModal.style.display = 'none';
+      });
+    }
+
+    if (hfSaveBtn && hfModal) {
+      hfSaveBtn.addEventListener('click', () => {
+        if (hfSelect) this.copilot.hfClient.setModel(hfSelect.value);
+        if (hfInput) this.copilot.hfClient.setApiKey(hfInput.value);
+        hfModal.style.display = 'none';
+        alert(`Hugging Face settings saved! Using ${this.copilot.hfClient.selectedModel}`);
+      });
+    }
+
     setInterval(() => this.updateZoomIndicator(), 500);
   }
 
@@ -486,8 +666,6 @@ class CanvasCordApp {
   }
 }
 
-// Start application once DOM is loaded
 window.addEventListener('DOMContentLoaded', () => {
   new CanvasCordApp();
 });
-

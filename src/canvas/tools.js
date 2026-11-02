@@ -1,24 +1,28 @@
 /**
  * CanvasCord Tool Controller & Interactive Event State Machine
+ * Features: 60FPS Dragging, Snapping Guides, Resize/Rotate, Frame Parent Movement, Nudging, Grouping
  */
 
 import { createElement } from './elements.js';
 
 export class ToolController {
-  constructor(engine, onSelectionChange, onElementChange) {
+  constructor(engine, onSelectionChange, onElementChange, onShareToChat) {
     this.engine = engine;
     this.canvas = engine.canvas;
     this.onSelectionChange = onSelectionChange || (() => {});
     this.onElementChange = onElementChange || (() => {});
+    this.onShareToChat = onShareToChat || (() => {});
 
-    this.activeTool = 'select'; // 'select' | 'hand' | 'frame' | 'rect' | 'circle' | 'star' | 'arrow' | 'pen' | 'text' | 'sticky'
+    this.activeTool = 'select'; // 'select' | 'hand' | 'frame' | 'rect' | 'circle' | 'star' | 'arrow' | 'pen' | 'text' | 'sticky' | 'laser'
+    this.isLaserActive = false;
+    this.laserTrail = [];
 
     // Interaction State
     this.isMouseDown = false;
     this.dragStart = { x: 0, y: 0 };
     this.currentDrag = { x: 0, y: 0 };
-    this.dragMode = 'none'; // 'none' | 'pan' | 'move' | 'resize' | 'rotate' | 'marquee' | 'draw'
-    this.resizeHandle = null; // 'tl','tc','tr','mr','br','bc','bl','ml'
+    this.dragMode = 'none'; // 'none' | 'pan' | 'move' | 'resize' | 'rotate' | 'marquee' | 'draw' | 'laser'
+    this.resizeHandle = null;
     this.activeDrawElement = null;
 
     // Undo / Redo History Stacks
@@ -30,11 +34,9 @@ export class ToolController {
   }
 
   saveState() {
-    // Truncate future if branched
     if (this.historyIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.historyIndex + 1);
     }
-    // Deep clone elements
     const snapshot = JSON.stringify(this.engine.elements);
     this.history.push(snapshot);
     if (this.history.length > 50) this.history.shift();
@@ -78,6 +80,8 @@ export class ToolController {
       this.canvas.style.cursor = 'text';
     } else if (this.activeTool === 'sticky') {
       this.canvas.style.cursor = 'copy';
+    } else if (this.activeTool === 'laser') {
+      this.canvas.style.cursor = 'crosshair';
     } else {
       this.canvas.style.cursor = 'default';
     }
@@ -101,11 +105,9 @@ export class ToolController {
     const sy = e.clientY - rect.top;
 
     if (e.ctrlKey || e.metaKey) {
-      // Zoom
       const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
       this.engine.zoomAt(sx, sy, zoomFactor);
     } else {
-      // Pan
       this.engine.pan(-e.deltaX, -e.deltaY);
     }
   }
@@ -120,15 +122,18 @@ export class ToolController {
     this.dragStart = { sx, sy, wx: world.x, wy: world.y };
     this.currentDrag = { sx, sy, wx: world.x, wy: world.y };
 
-    // Spacebar or Middle Mouse = Pan
     if (e.spaceKey || e.button === 1 || this.activeTool === 'hand') {
       this.dragMode = 'pan';
       this.canvas.style.cursor = 'grabbing';
       return;
     }
 
+    if (this.activeTool === 'laser') {
+      this.dragMode = 'laser';
+      return;
+    }
+
     if (this.activeTool === 'select') {
-      // Check if clicked on a resize handle of a selected element
       const handleHit = this.checkHandleHit(world.x, world.y);
       if (handleHit) {
         this.dragMode = 'resize';
@@ -143,15 +148,32 @@ export class ToolController {
         return;
       }
 
-      // Check hit on element
       const hit = this.engine.getElementAt(world.x, world.y);
       if (hit) {
         if (!e.shiftKey && !this.engine.selectedIds.has(hit.id)) {
           this.engine.selectedIds.clear();
         }
         this.engine.selectedIds.add(hit.id);
+
+        // Check if hit element is a Frame: also move all nested children
+        const movingIds = new Set(this.engine.selectedIds);
+        if (hit.type === 'frame') {
+          for (const item of this.engine.elements) {
+            if (item.id !== hit.id && !movingIds.has(item.id)) {
+              if (
+                item.x >= hit.x &&
+                item.x + item.width <= hit.x + hit.width &&
+                item.y >= hit.y &&
+                item.y + item.height <= hit.y + hit.height
+              ) {
+                movingIds.add(item.id);
+              }
+            }
+          }
+        }
+
         this.dragMode = 'move';
-        this.dragOffsets = Array.from(this.engine.selectedIds).map(id => {
+        this.dragOffsets = Array.from(movingIds).map(id => {
           const el = this.engine.elements.find(item => item.id === id);
           return { id, ox: el.x - world.x, oy: el.y - world.y };
         });
@@ -168,7 +190,6 @@ export class ToolController {
       return;
     }
 
-    // Drawing Tools
     if (['frame', 'rect', 'circle', 'star', 'arrow'].includes(this.activeTool)) {
       this.dragMode = 'draw';
       const el = createElement(this.activeTool, {
@@ -252,7 +273,6 @@ export class ToolController {
     const world = this.engine.screenToWorld(sx, sy);
 
     if (!this.isMouseDown) {
-      // Hover handle cursor
       if (this.activeTool === 'select') {
         const handleHit = this.checkHandleHit(world.x, world.y);
         if (handleHit) {
@@ -273,8 +293,14 @@ export class ToolController {
       return;
     }
 
+    if (this.dragMode === 'laser') {
+      this.laserTrail.push({ x: world.x, y: world.y, time: Date.now() });
+      if (this.laserTrail.length > 30) this.laserTrail.shift();
+      this.engine.requestRender();
+      return;
+    }
+
     if (this.dragMode === 'move') {
-      // Move selected elements with smart snapping
       this.engine.guides = [];
       const primaryId = Array.from(this.engine.selectedIds)[0];
       const primaryEl = this.engine.elements.find(i => i.id === primaryId);
@@ -287,7 +313,6 @@ export class ToolController {
         }
       }
 
-      // Check alignment to other elements
       if (primaryEl) {
         this.calculateSnappingGuides(primaryEl);
       }
@@ -304,12 +329,8 @@ export class ToolController {
       const curH = world.y;
 
       const handle = this.resizeHandle;
-      if (handle.includes('r')) {
-        el.width = Math.max(10, Math.round(curW - el.x));
-      }
-      if (handle.includes('b')) {
-        el.height = Math.max(10, Math.round(curH - el.y));
-      }
+      if (handle.includes('r')) el.width = Math.max(10, Math.round(curW - el.x));
+      if (handle.includes('b')) el.height = Math.max(10, Math.round(curH - el.y));
       if (handle.includes('l')) {
         const newW = Math.max(10, Math.round(init.x + init.width - curW));
         el.x = init.x + init.width - newW;
@@ -361,7 +382,6 @@ export class ToolController {
       this.engine.marquee.currentX = sx;
       this.engine.marquee.currentY = sy;
 
-      // Calculate elements inside marquee
       const mStartX = Math.min(this.dragStart.wx, world.x);
       const mStartY = Math.min(this.dragStart.wy, world.y);
       const mEndX = Math.max(this.dragStart.wx, world.x);
@@ -430,9 +450,28 @@ export class ToolController {
   }
 
   onKeyDown(e) {
-    // Prevent interfering with text inputs or chat
     if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
+    // Arrow keys nudging (1px or 10px with Shift)
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      const dx = e.key === 'ArrowLeft' ? -step : (e.key === 'ArrowRight' ? step : 0);
+      const dy = e.key === 'ArrowUp' ? -step : (e.key === 'ArrowDown' ? step : 0);
+
+      for (const id of this.engine.selectedIds) {
+        const el = this.engine.elements.find(i => i.id === id);
+        if (el) {
+          el.x += dx;
+          el.y += dy;
+        }
+      }
+      this.engine.requestRender();
+      this.onElementChange();
+      return;
+    }
+
+    // Tools hotkeys
     if (e.key === 'v' || e.key === 'V') this.setTool('select');
     if (e.key === 'h' || e.key === 'H') this.setTool('hand');
     if (e.key === 'f' || e.key === 'F') this.setTool('frame');
@@ -443,6 +482,14 @@ export class ToolController {
     if (e.key === 'p' || e.key === 'P') this.setTool('pen');
     if (e.key === 't' || e.key === 'T') this.setTool('text');
     if (e.key === 'n' || e.key === 'N') this.setTool('sticky');
+
+    // Layer Depth (Bring Forward / Send Backward)
+    if (e.key === ']') {
+      this.bringForwardSelected();
+    }
+    if (e.key === '[') {
+      this.sendBackwardSelected();
+    }
 
     // Delete
     if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -458,13 +505,13 @@ export class ToolController {
       }
     }
 
-    // Duplicate (Ctrl+D / Cmd+D)
+    // Duplicate
     if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
       this.duplicateSelected();
     }
 
-    // Select All (Ctrl+A / Cmd+A)
+    // Select All
     if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
       e.preventDefault();
       this.engine.elements.forEach(el => this.engine.selectedIds.add(el.id));
@@ -478,6 +525,30 @@ export class ToolController {
       if (e.shiftKey) this.redo();
       else this.undo();
     }
+  }
+
+  bringForwardSelected() {
+    for (const id of this.engine.selectedIds) {
+      const idx = this.engine.elements.findIndex(e => e.id === id);
+      if (idx !== -1 && idx < this.engine.elements.length - 1) {
+        const item = this.engine.elements.splice(idx, 1)[0];
+        this.engine.elements.splice(idx + 1, 0, item);
+      }
+    }
+    this.engine.requestRender();
+    this.onElementChange();
+  }
+
+  sendBackwardSelected() {
+    for (const id of this.engine.selectedIds) {
+      const idx = this.engine.elements.findIndex(e => e.id === id);
+      if (idx > 0) {
+        const item = this.engine.elements.splice(idx, 1)[0];
+        this.engine.elements.splice(idx - 1, 0, item);
+      }
+    }
+    this.engine.requestRender();
+    this.onElementChange();
   }
 
   duplicateSelected() {
@@ -557,7 +628,6 @@ export class ToolController {
       const otherCenterX = other.x + other.width / 2;
       const otherCenterY = other.y + other.height / 2;
 
-      // X alignment: left-left, center-center, right-right
       if (Math.abs(target.x - other.x) < threshold) {
         target.x = other.x;
         this.engine.guides.push({ type: 'vertical', x: other.x });
@@ -566,7 +636,6 @@ export class ToolController {
         this.engine.guides.push({ type: 'vertical', x: otherCenterX });
       }
 
-      // Y alignment: top-top, center-center, bottom-bottom
       if (Math.abs(target.y - other.y) < threshold) {
         target.y = other.y;
         this.engine.guides.push({ type: 'horizontal', y: other.y });
@@ -577,4 +646,3 @@ export class ToolController {
     }
   }
 }
-
