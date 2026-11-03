@@ -19,10 +19,12 @@ export class ToolController {
 
     // Interaction State
     this.isMouseDown = false;
+    this.isSpacePressed = false;
     this.dragStart = { x: 0, y: 0 };
     this.currentDrag = { x: 0, y: 0 };
     this.dragMode = 'none'; // 'none' | 'pan' | 'move' | 'resize' | 'rotate' | 'marquee' | 'draw' | 'laser'
     this.resizeHandle = null;
+    this.rotateTarget = null;
     this.activeDrawElement = null;
 
     // Undo / Redo History Stacks
@@ -96,6 +98,22 @@ export class ToolController {
     c.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
     c.addEventListener('dblclick', this.onDoubleClick.bind(this));
     window.addEventListener('keydown', this.onKeyDown.bind(this));
+
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName) && !e.target.isContentEditable) {
+        if (!this.isSpacePressed) {
+          this.isSpacePressed = true;
+          this.canvas.style.cursor = 'grab';
+        }
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      if (e.code === 'Space') {
+        this.isSpacePressed = false;
+        this.updateCursor();
+      }
+    });
   }
 
   onWheel(e) {
@@ -122,7 +140,7 @@ export class ToolController {
     this.dragStart = { sx, sy, wx: world.x, wy: world.y };
     this.currentDrag = { sx, sy, wx: world.x, wy: world.y };
 
-    if (e.spaceKey || e.button === 1 || this.activeTool === 'hand') {
+    if (this.isSpacePressed || e.button === 1 || this.activeTool === 'hand') {
       this.dragMode = 'pan';
       this.canvas.style.cursor = 'grabbing';
       return;
@@ -136,6 +154,12 @@ export class ToolController {
     if (this.activeTool === 'select') {
       const handleHit = this.checkHandleHit(world.x, world.y);
       if (handleHit) {
+        if (handleHit.handle === 'rot') {
+          this.dragMode = 'rotate';
+          this.rotateTarget = handleHit.element;
+          return;
+        }
+
         this.dragMode = 'resize';
         this.resizeHandle = handleHit.handle;
         this.resizeTarget = handleHit.element;
@@ -364,6 +388,23 @@ export class ToolController {
       return;
     }
 
+    if (this.dragMode === 'rotate') {
+      const el = this.rotateTarget;
+      if (el) {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const rad = Math.atan2(world.y - cy, world.x - cx);
+        let deg = Math.round((rad * 180) / Math.PI) + 90;
+        if (e.shiftKey) {
+          deg = Math.round(deg / 15) * 15; // 15-degree snap
+        }
+        el.rotation = ((deg % 360) + 360) % 360;
+        this.engine.requestRender();
+        this.onElementChange();
+      }
+      return;
+    }
+
     if (this.dragMode === 'draw') {
       const el = this.activeDrawElement;
       if (el) {
@@ -372,8 +413,8 @@ export class ToolController {
 
         el.x = Math.min(startX, world.x);
         el.y = Math.min(startY, world.y);
-        el.width = Math.max(10, Math.abs(world.x - startX));
-        el.height = Math.max(10, Math.abs(world.y - startY));
+        el.width = Math.abs(world.x - startX);
+        el.height = Math.abs(world.y - startY);
 
         if (el.type === 'arrow') {
           el.points = [{ x: 0, y: 0 }, { x: el.width, y: el.height }];
@@ -432,8 +473,8 @@ export class ToolController {
     if (this.dragMode === 'draw' || this.dragMode === 'pen') {
       if (this.activeDrawElement) {
         const el = this.activeDrawElement;
-        // If single-clicked without dragging, assign natural default dimensions
-        if (el.width < 10 && el.height < 10) {
+        // If single-clicked without dragging (or jitter < 15px), assign natural default dimensions
+        if (el.width < 15 || el.height < 15) {
           if (el.type === 'frame') {
             el.width = 390;
             el.height = 680;
@@ -544,6 +585,14 @@ export class ToolController {
       }
     }
 
+    // Group (Ctrl+G) / Ungroup (Ctrl+Shift+G)
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G')) {
+      e.preventDefault();
+      if (e.shiftKey) this.ungroupSelected();
+      else this.groupSelected();
+      return;
+    }
+
     // Duplicate
     if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
@@ -614,28 +663,96 @@ export class ToolController {
     }
   }
 
+  groupSelected() {
+    if (this.engine.selectedIds.size < 2) return;
+    const selected = Array.from(this.engine.selectedIds)
+      .map(id => this.engine.elements.find(i => i.id === id))
+      .filter(Boolean);
+
+    if (selected.length < 2) return;
+
+    const minX = Math.min(...selected.map(i => i.x));
+    const minY = Math.min(...selected.map(i => i.y));
+    const maxX = Math.max(...selected.map(i => i.x + i.width));
+    const maxY = Math.max(...selected.map(i => i.y + i.height));
+
+    const groupFrame = createElement('frame', {
+      name: 'Group // Frame',
+      x: minX - 16,
+      y: minY - 16,
+      width: (maxX - minX) + 32,
+      height: (maxY - minY) + 32,
+      fill: 'transparent',
+      stroke: '#0D99FF',
+      strokeWidth: 1,
+      cornerRadius: 12,
+    });
+
+    const lowestIdx = Math.min(...selected.map(el => this.engine.elements.indexOf(el)));
+    this.engine.elements.splice(lowestIdx, 0, groupFrame);
+
+    this.engine.selectedIds.clear();
+    this.engine.selectedIds.add(groupFrame.id);
+    this.onSelectionChange([groupFrame.id]);
+    this.onElementChange();
+    this.saveState();
+    this.engine.requestRender();
+  }
+
+  ungroupSelected() {
+    for (const id of Array.from(this.engine.selectedIds)) {
+      const el = this.engine.elements.find(i => i.id === id);
+      if (el && el.type === 'frame' && el.name.toLowerCase().includes('group')) {
+        this.engine.elements = this.engine.elements.filter(i => i.id !== id);
+      }
+    }
+    this.engine.selectedIds.clear();
+    this.onSelectionChange([]);
+    this.onElementChange();
+    this.saveState();
+    this.engine.requestRender();
+  }
+
   checkHandleHit(wx, wy) {
-    const handleDist = 8 / this.engine.viewport.zoom;
+    const handleDist = 9 / this.engine.viewport.zoom;
 
     for (const id of this.engine.selectedIds) {
       const el = this.engine.elements.find(e => e.id === id);
       if (!el) continue;
 
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
       const hw = el.width;
       const hh = el.height;
+
+      let dx = wx - cx;
+      let dy = wy - cy;
+
+      if (el.rotation) {
+        const rad = (-el.rotation * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const rx = dx * cos - dy * sin;
+        const ry = dx * sin + dy * cos;
+        dx = rx;
+        dy = ry;
+      }
+
+      const rotDist = 20 / this.engine.viewport.zoom;
       const handles = {
-        tl: { x: el.x, y: el.y },
-        tc: { x: el.x + hw / 2, y: el.y },
-        tr: { x: el.x + hw, y: el.y },
-        mr: { x: el.x + hw, y: el.y + hh / 2 },
-        br: { x: el.x + hw, y: el.y + hh },
-        bc: { x: el.x + hw / 2, y: el.y + hh },
-        bl: { x: el.x, y: el.y + hh },
-        ml: { x: el.x, y: el.y + hh / 2 },
+        tl: { x: -hw / 2, y: -hh / 2 },
+        tc: { x: 0, y: -hh / 2 },
+        tr: { x: hw / 2, y: -hh / 2 },
+        mr: { x: hw / 2, y: 0 },
+        br: { x: hw / 2, y: hh / 2 },
+        bc: { x: 0, y: hh / 2 },
+        bl: { x: -hw / 2, y: hh / 2 },
+        ml: { x: -hw / 2, y: 0 },
+        rot: { x: 0, y: -hh / 2 - rotDist },
       };
 
       for (const [key, pos] of Object.entries(handles)) {
-        if (Math.abs(wx - pos.x) < handleDist && Math.abs(wy - pos.y) < handleDist) {
+        if (Math.abs(dx - pos.x) < handleDist && Math.abs(dy - pos.y) < handleDist) {
           return { handle: key, element: el };
         }
       }
@@ -644,6 +761,7 @@ export class ToolController {
   }
 
   getHandleCursor(handle) {
+    if (handle === 'rot') return 'crosshair';
     const map = {
       tl: 'nwse-resize',
       br: 'nwse-resize',

@@ -161,7 +161,21 @@ export class DiscordChat {
       this.state.messages[channelId].push(userMsg);
       this.render();
 
-      if (text.toLowerCase().includes('@copilot')) {
+      const lowerText = text.toLowerCase().trim();
+      const server = this.state.servers.find(s => s.id === this.state.activeServerId);
+      const currentChannel = server?.channels.find(c => c.id === channelId);
+      const isAiChannel = currentChannel?.name?.includes('prompt') || currentChannel?.name?.includes('ai');
+      const isGenerativePrompt = lowerText.startsWith('create') ||
+        lowerText.startsWith('generate') ||
+        lowerText.startsWith('design') ||
+        lowerText.startsWith('build') ||
+        lowerText.startsWith('make') ||
+        lowerText.startsWith('draw') ||
+        lowerText.startsWith('synthesize') ||
+        lowerText.startsWith('add ') ||
+        lowerText.includes('@copilot');
+
+      if (isGenerativePrompt || isAiChannel) {
         this.handleCopilotBot(text);
       }
     };

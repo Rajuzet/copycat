@@ -191,6 +191,16 @@ export class PropertiesPanel {
               </select>
             </div>
           </div>
+          <div class="color-picker-row" style="margin-top:8px">
+            <input type="color" id="prop-font-color" value="${this.sanitizeColor(el.fontColor || '#ffffff')}" />
+            <input type="text" id="prop-font-color-hex" value="${el.fontColor || '#ffffff'}" class="hex-input" />
+            <select id="prop-font-family" style="width:110px">
+              <option value="Inter, sans-serif" ${el.fontFamily?.includes('Inter') ? 'selected' : ''}>Inter</option>
+              <option value="monospace" ${el.fontFamily === 'monospace' ? 'selected' : ''}>Mono</option>
+              <option value="system-ui, sans-serif" ${el.fontFamily?.includes('system-ui') ? 'selected' : ''}>System</option>
+              <option value="Georgia, serif" ${el.fontFamily?.includes('Georgia') ? 'selected' : ''}>Serif</option>
+            </select>
+          </div>
         </div>
       ` : ''}
 
@@ -204,6 +214,19 @@ export class PropertiesPanel {
           </div>
         </div>
       ` : ''}
+
+      <!-- Layer Actions -->
+      <div class="prop-section">
+        <div class="prop-section-title">Layer Actions</div>
+        <div class="prop-grid-2">
+          <button class="fit-btn secondary" id="btn-prop-duplicate" title="Duplicate Layer (Ctrl+D)">⧉ Duplicate</button>
+          <button class="fit-btn danger" id="btn-prop-delete" style="background:#ed4245;color:white" title="Delete Layer (Del)">🗑️ Delete</button>
+        </div>
+        <div class="prop-grid-2" style="margin-top:8px">
+          <button class="fit-btn secondary" id="btn-prop-front" title="Bring to Front (])">⤒ Front</button>
+          <button class="fit-btn secondary" id="btn-prop-back" title="Send to Back ([)">⤓ Back</button>
+        </div>
+      </div>
     `;
   }
 
@@ -450,7 +473,7 @@ export class PropertiesPanel {
     const shadowToggle = this.container.querySelector('#prop-shadow-toggle');
     if (shadowToggle) {
       shadowToggle.addEventListener('change', e => {
-        if (!el.shadow) el.shadow = {};
+        if (!el.shadow) el.shadow = { x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.3)' };
         el.shadow.enabled = e.target.checked;
         this.render();
         this.engine.requestRender();
@@ -458,7 +481,25 @@ export class PropertiesPanel {
       });
     }
 
-    bindNum('#prop-shadow-blur', 'blur');
+    const shadowBlur = this.container.querySelector('#prop-shadow-blur');
+    if (shadowBlur) {
+      shadowBlur.addEventListener('input', e => {
+        if (!el.shadow) el.shadow = {};
+        el.shadow.blur = parseFloat(e.target.value) || 0;
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
+
+    const shadowY = this.container.querySelector('#prop-shadow-y');
+    if (shadowY) {
+      shadowY.addEventListener('input', e => {
+        if (!el.shadow) el.shadow = {};
+        el.shadow.y = parseFloat(e.target.value) || 0;
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
 
     const textContent = this.container.querySelector('#prop-text-content');
     if (textContent) {
@@ -466,6 +507,110 @@ export class PropertiesPanel {
         el.text = e.target.value;
         this.engine.requestRender();
         this.onUpdate();
+      });
+    }
+
+    const fontWeight = this.container.querySelector('#prop-font-weight');
+    if (fontWeight) {
+      fontWeight.addEventListener('change', e => {
+        el.fontWeight = e.target.value;
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
+
+    const fontFamily = this.container.querySelector('#prop-font-family');
+    if (fontFamily) {
+      fontFamily.addEventListener('change', e => {
+        el.fontFamily = e.target.value;
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
+
+    const fontColor = this.container.querySelector('#prop-font-color');
+    const fontColorHex = this.container.querySelector('#prop-font-color-hex');
+    if (fontColor && fontColorHex) {
+      fontColor.addEventListener('input', e => {
+        el.fontColor = e.target.value;
+        fontColorHex.value = e.target.value;
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+      fontColorHex.addEventListener('input', e => {
+        el.fontColor = e.target.value;
+        fontColor.value = e.target.value;
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
+
+    const starPoints = this.container.querySelector('#prop-star-points');
+    if (starPoints) {
+      starPoints.addEventListener('input', e => {
+        el.pointsCount = parseInt(e.target.value, 10) || 5;
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
+
+    // Duplicate Layer
+    const dupBtn = this.container.querySelector('#btn-prop-duplicate');
+    if (dupBtn) {
+      dupBtn.addEventListener('click', () => {
+        const copy = JSON.parse(JSON.stringify(el));
+        copy.id = 'el_' + Math.random().toString(36).substring(2, 9);
+        copy.name = `${el.name} (Copy)`;
+        copy.x += 24;
+        copy.y += 24;
+        this.engine.elements.push(copy);
+        this.engine.selectedIds.clear();
+        this.engine.selectedIds.add(copy.id);
+        this.render();
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
+
+    // Delete Layer
+    const delBtn = this.container.querySelector('#btn-prop-delete');
+    if (delBtn) {
+      delBtn.addEventListener('click', () => {
+        this.engine.elements = this.engine.elements.filter(i => i.id !== el.id);
+        this.engine.selectedIds.delete(el.id);
+        this.render();
+        this.engine.requestRender();
+        this.onUpdate();
+      });
+    }
+
+    // Bring to Front
+    const frontBtn = this.container.querySelector('#btn-prop-front');
+    if (frontBtn) {
+      frontBtn.addEventListener('click', () => {
+        const idx = this.engine.elements.findIndex(i => i.id === el.id);
+        if (idx !== -1) {
+          const item = this.engine.elements.splice(idx, 1)[0];
+          this.engine.elements.push(item);
+          this.render();
+          this.engine.requestRender();
+          this.onUpdate();
+        }
+      });
+    }
+
+    // Send to Back
+    const backBtn = this.container.querySelector('#btn-prop-back');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        const idx = this.engine.elements.findIndex(i => i.id === el.id);
+        if (idx !== -1) {
+          const item = this.engine.elements.splice(idx, 1)[0];
+          this.engine.elements.unshift(item);
+          this.render();
+          this.engine.requestRender();
+          this.onUpdate();
+        }
       });
     }
 

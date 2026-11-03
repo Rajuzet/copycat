@@ -38,12 +38,15 @@ export class LayersTree {
           <span class="layer-icon">${icon}</span>
           <span class="layer-name" title="Double click to rename">${el.name}</span>
           <div class="layer-actions">
+            <button class="layer-action-btn layer-reorder-btn" data-action="up" title="Bring Forward">▲</button>
+            <button class="layer-action-btn layer-reorder-btn" data-action="down" title="Send Backward">▼</button>
             <button class="layer-action-btn toggle-vis ${!isVisible ? 'dimmed' : ''}" data-action="vis" title="Toggle Visibility">
               ${isVisible ? '👁' : '👁‍🗨'}
             </button>
             <button class="layer-action-btn toggle-lock ${isLocked ? 'active' : ''}" data-action="lock" title="Lock/Unlock">
               ${isLocked ? '🔒' : '🔓'}
             </button>
+            <button class="layer-action-btn layer-delete-btn" data-action="delete" title="Delete Layer">✕</button>
           </div>
         </div>
       `;
@@ -122,6 +125,52 @@ export class LayersTree {
           e.stopPropagation();
           el.locked = !el.locked;
           this.render();
+          this.onUpdate();
+        });
+      }
+
+      // Reorder Up
+      const upBtn = item.querySelector('[data-action="up"]');
+      if (upBtn) {
+        upBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const idx = this.engine.elements.findIndex(i => i.id === id);
+          if (idx !== -1 && idx < this.engine.elements.length - 1) {
+            const temp = this.engine.elements.splice(idx, 1)[0];
+            this.engine.elements.splice(idx + 1, 0, temp);
+            this.render();
+            this.engine.requestRender();
+            this.onUpdate();
+          }
+        });
+      }
+
+      // Reorder Down
+      const downBtn = item.querySelector('[data-action="down"]');
+      if (downBtn) {
+        downBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const idx = this.engine.elements.findIndex(i => i.id === id);
+          if (idx > 0) {
+            const temp = this.engine.elements.splice(idx, 1)[0];
+            this.engine.elements.splice(idx - 1, 0, temp);
+            this.render();
+            this.engine.requestRender();
+            this.onUpdate();
+          }
+        });
+      }
+
+      // Delete Layer
+      const delBtn = item.querySelector('[data-action="delete"]');
+      if (delBtn) {
+        delBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          this.engine.elements = this.engine.elements.filter(i => i.id !== id);
+          this.engine.selectedIds.delete(id);
+          this.render();
+          this.engine.requestRender();
+          this.onSelect(Array.from(this.engine.selectedIds));
           this.onUpdate();
         });
       }

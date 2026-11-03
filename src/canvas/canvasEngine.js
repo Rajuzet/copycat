@@ -218,10 +218,13 @@ export class CanvasEngine {
 
   renderElement(ctx, el) {
     ctx.save();
-    ctx.translate(el.x, el.y);
+    const cx = el.x + el.width / 2;
+    const cy = el.y + el.height / 2;
+    ctx.translate(cx, cy);
     if (el.rotation) {
       ctx.rotate((el.rotation * Math.PI) / 180);
     }
+    ctx.translate(-el.width / 2, -el.height / 2);
     ctx.globalAlpha = el.opacity ?? 1;
 
     // Apply Drop Shadow if enabled
@@ -537,29 +540,31 @@ export class CanvasEngine {
       const el = this.elements.find(e => e.id === id);
       if (!el || !el.visible) continue;
 
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      const hw = el.width;
+      const hh = el.height;
+
       ctx.save();
-      ctx.translate(el.x, el.y);
+      ctx.translate(cx, cy);
       if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
 
       // Figma selection bounding line (#0D99FF)
       ctx.strokeStyle = '#0D99FF';
       ctx.lineWidth = 1.5 / this.viewport.zoom;
-      ctx.strokeRect(0, 0, el.width, el.height);
+      ctx.strokeRect(-hw / 2, -hh / 2, hw, hh);
 
       // 8 Resize Handles
       const handleSize = 7 / this.viewport.zoom;
-      const hw = el.width;
-      const hh = el.height;
-
       const handles = [
-        { x: 0, y: 0 },
+        { x: -hw / 2, y: -hh / 2 },
+        { x: 0, y: -hh / 2 },
+        { x: hw / 2, y: -hh / 2 },
         { x: hw / 2, y: 0 },
-        { x: hw, y: 0 },
-        { x: hw, y: hh / 2 },
-        { x: hw, y: hh },
-        { x: hw / 2, y: hh },
-        { x: 0, y: hh },
+        { x: hw / 2, y: hh / 2 },
         { x: 0, y: hh / 2 },
+        { x: -hw / 2, y: hh / 2 },
+        { x: -hw / 2, y: 0 },
       ];
 
       ctx.fillStyle = '#ffffff';
@@ -574,12 +579,12 @@ export class CanvasEngine {
       // Rotation Handle (Circle above top edge)
       const rotDist = 20 / this.viewport.zoom;
       ctx.beginPath();
-      ctx.moveTo(hw / 2, 0);
-      ctx.lineTo(hw / 2, -rotDist);
+      ctx.moveTo(0, -hh / 2);
+      ctx.lineTo(0, -hh / 2 - rotDist);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.arc(hw / 2, -rotDist, handleSize / 1.5, 0, Math.PI * 2);
+      ctx.arc(0, -hh / 2 - rotDist, handleSize / 1.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -717,11 +722,26 @@ export class CanvasEngine {
       const el = this.elements[i];
       if (!el.visible || el.locked) continue;
 
+      const cx = el.x + el.width / 2;
+      const cy = el.y + el.height / 2;
+      let dx = wx - cx;
+      let dy = wy - cy;
+
+      if (el.rotation) {
+        const rad = (-el.rotation * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const rx = dx * cos - dy * sin;
+        const ry = dx * sin + dy * cos;
+        dx = rx;
+        dy = ry;
+      }
+
       if (
-        wx >= el.x &&
-        wx <= el.x + el.width &&
-        wy >= el.y &&
-        wy <= el.y + el.height
+        dx >= -el.width / 2 &&
+        dx <= el.width / 2 &&
+        dy >= -el.height / 2 &&
+        dy <= el.height / 2
       ) {
         return el;
       }

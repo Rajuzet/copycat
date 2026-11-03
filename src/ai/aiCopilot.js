@@ -8,6 +8,15 @@ import {
   createSaaSHeroTemplate,
   createMobileAppTemplate,
   createPricingTableTemplate,
+  createLoginFormTemplate,
+  createNavbarTemplate,
+  createTestimonialTemplate,
+  createProfileCardTemplate,
+  createModalDialogTemplate,
+  createProductCardTemplate,
+  createSettingsPanelTemplate,
+  createDataTableTemplate,
+  createSmartUniversalLayout,
 } from './templates.js';
 import { HuggingFaceClient } from './huggingFaceClient.js';
 
@@ -56,8 +65,63 @@ export class AICopilot {
       }
     }
 
-    // 2. High-Precision Design System Templates & Heuristic Synthesizers
-    if (raw.includes('hero') || raw.includes('landing')) {
+    // 2. Login / Authentication Card (High Priority Intent)
+    if (raw.includes('login') || raw.includes('auth') || raw.includes('sign in') || raw.includes('signin') || raw.includes('signup') || raw.includes('register')) {
+      const els = createLoginFormTemplate(cx - 190, cy - 240);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `🔐 Synthesized **Modern Sign In / Authentication Dialog** with email/password inputs and Google SSO.`;
+    }
+
+    // 3. E-Commerce Product Card
+    if (raw.includes('product') || raw.includes('sneaker') || raw.includes('shoe') || raw.includes('shop') || raw.includes('store') || raw.includes('ecommerce')) {
+      const els = createProductCardTemplate(cx - 160, cy - 220);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `👟 Synthesized **E-Commerce Product Card** with discount tag, price display, and Add to Bag CTA.`;
+    }
+
+    // 4. Settings & Workspace Preferences Panel
+    if (raw.includes('setting') || raw.includes('preference') || raw.includes('toggle') || raw.includes('config')) {
+      const els = createSettingsPanelTemplate(cx - 220, cy - 190);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `⚙️ Synthesized **Workspace Preferences & Settings Panel** with interactive feature toggles.`;
+    }
+
+    // 5. Customer Testimonial / Review Card
+    if (raw.includes('testimonial') || raw.includes('review') || raw.includes('rating') || raw.includes('quote') || raw.includes('feedback')) {
+      const els = createTestimonialTemplate(cx - 190, cy - 110);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `⭐ Synthesized **Customer Testimonial Card** with avatar, 5-star rating, and quote copy.`;
+    }
+
+    // 6. User Profile / Team Member Card
+    if (raw.includes('profile') || raw.includes('member') || raw.includes('author') || raw.includes('user card')) {
+      const els = createProfileCardTemplate(cx - 170, cy - 190);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `👤 Synthesized **Designer Profile Card** with cover banner, avatar, follower counts, and Follow CTA.`;
+    }
+
+    // 7. SaaS Landing Hero Section
+    if (raw.includes('hero') || raw.includes('landing') || raw.includes('homepage')) {
       const els = createSaaSHeroTemplate(
         -this.engine.viewport.x + 80,
         -this.engine.viewport.y + 60
@@ -68,7 +132,8 @@ export class AICopilot {
       return `✨ Synthesized **Modern SaaS Landing Page Hero Section** (1440px desktop frame with navbar, typography, CTA buttons, and ambient blurple lighting).`;
     }
 
-    if (raw.includes('mobile') || raw.includes('phone') || raw.includes('music')) {
+    // 8. Mobile App Player
+    if (raw.includes('mobile') || raw.includes('phone') || raw.includes('music') || raw.includes('ios') || raw.includes('android')) {
       const els = createMobileAppTemplate(
         -this.engine.viewport.x + 120,
         -this.engine.viewport.y + 60
@@ -79,7 +144,8 @@ export class AICopilot {
       return `📱 Synthesized **iOS 16 Mobile Music Player** (390×844 frame with Dynamic Island, album art card, progress scrubbing bar, and media controls).`;
     }
 
-    if (raw.includes('pricing') || raw.includes('tier')) {
+    // 9. Pricing Table Matrix
+    if (raw.includes('pricing') || raw.includes('tier') || raw.includes('plan') || raw.includes('subscription')) {
       const els = createPricingTableTemplate(
         -this.engine.viewport.x + 100,
         -this.engine.viewport.y + 80
@@ -90,8 +156,8 @@ export class AICopilot {
       return `💳 Synthesized **3-Tier SaaS Pricing Matrix** (Starter, Pro Featured, and Enterprise packages with feature checklists).`;
     }
 
-    // 3. Checkout Funnel / Card Component
-    if (raw.includes('checkout') || raw.includes('payment') || raw.includes('card')) {
+    // 10. Checkout & Payment Funnel
+    if (raw.includes('checkout') || raw.includes('credit card') || raw.includes('debit card') || raw.includes('payment') || raw.includes('stripe') || raw.includes('apple pay') || raw.includes('billing')) {
       const frame = createElement('frame', {
         name: 'Frame // Checkout Dialog',
         x: cx - 180,
@@ -159,8 +225,19 @@ export class AICopilot {
       return `💳 Generated **Dark Mode Checkout Card** with credit card input and Apple Pay button.`;
     }
 
-    // 4. Analytics / Stats Metric Cards
-    if (raw.includes('stats') || raw.includes('metrics') || raw.includes('analytics') || raw.includes('dashboard')) {
+    // 11. Data Table Grid
+    if (raw.includes('table') || raw.includes('data table') || raw.includes('grid') || raw.includes('deployment') || raw.includes('pipeline')) {
+      const els = createDataTableTemplate(cx - 260, cy - 160);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `📋 Synthesized **Multi-Column Data Table Grid** with headers, row statuses, and pagination.`;
+    }
+
+    // 12. Analytics / Stats Metric Cards
+    if (raw.includes('stats') || raw.includes('metrics') || raw.includes('analytics') || raw.includes('dashboard') || raw.includes('kpi')) {
       const metrics = [
         { title: 'Total Revenue', value: '$84,230', change: '+18.4% vs last mo', color: '#57F287' },
         { title: 'Active Designers', value: '14,892', change: '+12.1% online', color: '#5865F2' },
@@ -216,8 +293,30 @@ export class AICopilot {
       return `📊 Generated **3-Column Analytics KPI Metric Cards** with performance deltas.`;
     }
 
-    // 5. Button Synthesis
-    if (raw.includes('button')) {
+    // 13. Navigation Bar
+    if (raw.includes('navbar') || raw.includes('navigation') || raw.includes('header') || raw.includes('menu')) {
+      const els = createNavbarTemplate(cx - 550, cy - 32);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `🧭 Synthesized **1100px Desktop Navigation Bar** with brand logo, links, and CTA button.`;
+    }
+
+    // 14. Modal / Alert Dialog
+    if (raw.includes('modal') || raw.includes('dialog') || raw.includes('alert') || raw.includes('popup')) {
+      const els = createModalDialogTemplate(cx - 220, cy - 120);
+      this.engine.elements.push(...els);
+      this.engine.selectedIds.clear();
+      els.forEach(el => this.engine.selectedIds.add(el.id));
+      this.engine.requestRender();
+      this.onElementAdded();
+      return `⚠️ Synthesized **Confirmation & Alert Dialog Modal** with dual action buttons.`;
+    }
+
+    // 15. Button Synthesis
+    if (raw.includes('button') || raw.includes('cta')) {
       const labelMatch = promptText.match(/["'](.*?)["']/);
       const label = labelMatch ? labelMatch[1] : 'Action Button';
       const color = raw.includes('green') || raw.includes('emerald') ? '#57F287' : (raw.includes('red') ? '#ED4245' : '#5865F2');
@@ -248,7 +347,7 @@ export class AICopilot {
       return `🔘 Spawned high-contrast UI Button **"${label}"** at center viewport.`;
     }
 
-    // 6. Color Palette Generation
+    // 16. Color Palette Generation
     if (raw.includes('palette') || raw.includes('color')) {
       const colors = raw.includes('cyberpunk')
         ? ['#00F0FF', '#FF007F', '#7000FF', '#FFE600', '#05050A']
@@ -282,7 +381,7 @@ export class AICopilot {
       return `🎨 Generated 5-step harmonious design palette on canvas!`;
     }
 
-    // 7. Design Audit / Critique
+    // 17. Design Audit / Critique
     if (raw.includes('audit') || raw.includes('critique')) {
       const count = this.engine.elements.length;
       return `🔍 **AI Design System Audit**:\n` +
@@ -292,7 +391,7 @@ export class AICopilot {
         `• **Recommendation**: Ensure touch targets on mobile frames maintain a minimum 48×48px clickable boundary.`;
     }
 
-    // 8. Natural Language Feedback Modifications (e.g. "change color to ...")
+    // 18. Natural Language Feedback Modifications (e.g. "change color to ...")
     if (this.engine.selectedIds.size > 0 && (raw.includes('change') || raw.includes('make') || raw.includes('color'))) {
       let modifiedCount = 0;
       for (const id of this.engine.selectedIds) {
@@ -310,19 +409,13 @@ export class AICopilot {
       return `⚡ Applied natural language modifications to ${modifiedCount} selected canvas layers.`;
     }
 
-    // Fallback Sticky Note
-    const note = createElement('sticky', {
-      name: 'AI Response Note',
-      x: cx - 90,
-      y: cy - 80,
-      text: `🤖 AI Copilot:\nProcessed: "${promptText}".\nTip: Connect your Hugging Face API key in AI Settings for unrestricted custom generative modeling!`,
-      fill: '#5865F2',
-      fontColor: '#ffffff',
-      author: 'Canvas AI Bot',
-    });
-    this.engine.elements.push(note);
+    // 19. Universal Smart Vector Synthesizer (Generates for ANY arbitrary prompt)
+    const universalEls = createSmartUniversalLayout(cx - 210, cy - 140, promptText);
+    this.engine.elements.push(...universalEls);
+    this.engine.selectedIds.clear();
+    universalEls.forEach(el => this.engine.selectedIds.add(el.id));
     this.engine.requestRender();
     this.onElementAdded();
-    return `📝 Dropped generated copilot note for prompt: *"${promptText}"*`;
+    return `✨ AI Synthesized **"${promptText.slice(0, 45)}"** (${universalEls.length} styled vector elements placed on canvas).`;
   }
 }
